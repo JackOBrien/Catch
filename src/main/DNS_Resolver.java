@@ -1,0 +1,180 @@
+package main;
+
+import java.io.IOException;
+import java.net.*;
+import java.util.Arrays;
+
+
+/********************************************************************
+ * Catch Server - Recursive Caching DNS Resolver
+ * Project 3 - CIS 457-10
+ *
+ * @author Jack O'Brien
+ * @author Megan Maher
+ * @author Tyler McCarthy
+ * 
+ * @version Sep 26, 2014
+ *******************************************************************/
+public class DNS_Resolver {
+	
+	/** The port to query a DNS is  */
+	final static int DNS_PORT = 53;
+	
+	/** The port used to host this server */
+	public int SERVER_PORT;
+	
+	public InetAddress SERVER_IP;
+	
+	public DatagramSocket serverSocket;
+	
+
+	/****************************************************************
+	 * Constructor for DNS_Resolver. Sets the port.
+	 * 
+	 * @param port Port for the server to bind to.
+	 * @throws UnknownHostException
+	 ***************************************************************/
+	public DNS_Resolver(int port) throws Exception {
+		SERVER_PORT = port;
+		setLocalIP();
+		initializeServer();
+		
+		welcomeMessage();
+	}
+	
+	/****************************************************************
+	 * Adds message to UnkownHostException if thrown.
+	 * 
+	 * @throws UnknownHostException throws when unable
+	 * to resolve localhost IPv4 address.
+	 ***************************************************************/
+	public void setLocalIP() throws UnknownHostException{
+		try {
+			SERVER_IP = InetAddress.getLocalHost();
+		} catch (UnknownHostException he) {
+			String message = "Unable to resolve server IP";
+			throw new UnknownHostException(message);
+		}
+	}
+	
+	/****************************************************************
+	 * Initializes the Server's socket, binding it to the
+	 * port given to the constructor. 
+	 * 
+	 * @throws SocketException if there is an issue creating
+	 * the serverSocket. Likely the port is already in use.
+	 ***************************************************************/
+	public void initializeServer() throws SocketException {
+		try {
+			serverSocket = new DatagramSocket(SERVER_PORT);
+		} catch (SocketException be) {
+			String message = "Problem hosting server on port " + SERVER_PORT;
+			message += "\nIs there another instance of this server?";
+			throw new SocketException(message);
+		}
+	}
+	
+	/****************************************************************
+	 * Prints a message indicating the server was created properly.
+	 ***************************************************************/
+	public void welcomeMessage() {
+		String msg = "Started DNS Resolver on ";
+		msg += SERVER_IP.getHostAddress() + ":" + SERVER_PORT;
+		System.out.println(msg);
+	}
+	
+	/****************************************************************
+	 * Creates a DatagramPacket for the server to use to
+	 * receive data. Once the data is received, the packet
+	 * is returned. 
+	 * 
+	 * @return packet containing received data.
+	 * @throws IOException if something goes wrong in receiving.
+	 ***************************************************************/
+	public DatagramPacket receiveMessage() throws IOException {
+		byte[] recvData = new byte[1024];
+		
+		DatagramPacket recvPacket = 
+				new DatagramPacket(recvData,recvData.length);
+		
+		serverSocket.receive(recvPacket);
+		
+		return recvPacket;
+	}
+	
+	public void begin() {
+		DatagramPacket recvPacket = null;
+		
+		while (true) {
+			
+			/* Starts listening for data send to the server.
+			 * Restarts the loops and prints error message if
+			 * there is an error receiving the packet. */
+			try {
+				recvPacket = receiveMessage();
+			} catch (IOException e) {
+				String message = "Error receiving packet";
+				System.err.println(message);
+				continue;
+			}
+			
+			// TODO : Interpret data 
+			
+			// TODO : Message next in line DNS recursively until answer > 0
+			
+		}
+	}
+	
+	/****************************************************************
+	 * Main method which initializes and runs the DNS Resolver
+	 * 
+	 * @param args port to host the server on. 
+	 ***************************************************************/
+	public static void main(String args[]) {
+    	
+		int port = 0;
+		
+		if (args.length < 1) {
+			String message = "Port number required";
+			throw new IllegalArgumentException(message);
+		} else {
+			try{
+				port = Integer.parseInt(args[0]);
+			} catch (NumberFormatException ne) {
+				String message = "Port must be an integer";
+				throw new IllegalArgumentException(message);
+			}
+		}
+		
+		DNS_Resolver resolver = null;
+		
+		try {
+			resolver = new DNS_Resolver(port);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
+    	
+    }
+	
+	
+	/****************************************************************
+	 * Takes an array of bytes and prints out the binary.
+	 * Bytes are separated by '-'.
+	 * 
+	 * TODO : Remove this method before release.
+	 * 
+	 * @param data the bytes to be converted to binary.
+	 ***************************************************************/
+	public static void printBinary(byte[] data){
+		for (int i = 0; i < data.length; i++){
+			byte n = data[i];
+			System.out.print(
+					String.format("%8s", 
+							Integer.toBinaryString(n & 0xFF)).replace(' ', '0'));
+			System.out.print("-");
+		}
+		
+		System.out.println("\nEND");
+	}
+
+}
