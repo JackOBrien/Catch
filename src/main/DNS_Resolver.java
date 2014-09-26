@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Arrays;
 
+import com.sun.xml.internal.ws.util.StringUtils;
+
 
 /********************************************************************
  * Catch Server - Recursive Caching DNS Resolver
@@ -119,10 +121,71 @@ public class DNS_Resolver {
 			}
 			
 			// TODO : Interpret data 
+			interpretData(recvPacket);
 			
 			// TODO : Message next in line DNS recursively until answer > 0
 			
 		}
+	}
+	
+	public void interpretData(DatagramPacket packet) {
+		byte[] data = packet.getData();
+		
+		System.out.println(Arrays.toString(data));
+		printBinary(data);
+		
+		/* First 16 bits are the ID */
+		String id = "0x" + Integer.toHexString(data[0]) +
+				Integer.toHexString(data[1]);
+		
+		/* Next 16 bits are the FLAGS */
+		handleFlags(data);
+		
+	}
+	
+	/****************************************************************
+	 * Interprets the second two bytes of the DNS packet header 
+	 * containing different flags and codes.
+	 * 
+	 * @param data the array of bytes containing the DNS header
+	 * @return int array containing flag and code values.
+	 * The array is organized as follows: 
+	 *   QR : 0 if query, 1 if response;
+	 *   OPcode : Specifies type of query, 0 for standard;
+	 *   AA : 0 if answer is authoritative;
+	 *   TC : 1 if message was truncated due to UDP size constraints;
+	 *   RD : 1 if recursion is desired;
+	 *   RA : 1 if response server supports recursion;
+	 *   Z : Reserved 3 Bits;
+	 *   Rcode : 0 if query or no error. > 0 indicates error.
+	 ***************************************************************/
+	public int[] handleFlags(byte[] data) {
+		byte b1 = data[2];
+		byte b2 = data[3];
+		
+		// First and second flag byte as binary strings
+		String s1 = Integer.toString(b1, 2);
+		String s2 = Integer.toString(b2, 2);
+		String buff = "00000000";
+		
+		// Combines the two flag bytes into one binary string. The
+		// substring call is used so that each byte has length 8 
+		// with leading zeros.
+		String binaryFlags = (buff + s1).substring(s1.length()) + 
+					   (buff + s2).substring(s2.length());
+		
+		// Set flags from the binary string
+		int QR  = Integer.valueOf(binaryFlags.charAt(0)); 
+		int OPCODE = Integer.valueOf(binaryFlags.substring(1, 5), 2);
+		int AA = Integer.valueOf(binaryFlags.charAt(5));
+		int TC = Integer.valueOf(binaryFlags.charAt(6));
+		int RD = Integer.valueOf(binaryFlags.charAt(7));
+		int RA = Integer.valueOf(binaryFlags.charAt(8));
+		int Z = Integer.valueOf(binaryFlags.substring(9, 12), 2);
+		int RCODE = Integer.valueOf(binaryFlags.substring(12, 16), 2);
+		
+		int[] flags = {QR, OPCODE, AA, TC, RD, RA, Z, RCODE};
+		return flags;
 	}
 	
 	/****************************************************************
@@ -152,8 +215,11 @@ public class DNS_Resolver {
 			resolver = new DNS_Resolver(port);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
+			System.exit(1);
 		}
     	
+		resolver.begin();
+		
     }
 	
 	
