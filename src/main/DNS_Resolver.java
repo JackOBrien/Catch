@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Arrays;
 
+import packet.DNS_Header;
+import packet.DNS_Packet;
+
 import com.sun.xml.internal.ws.util.StringUtils;
 
 
@@ -23,11 +26,11 @@ public class DNS_Resolver {
 	final static int DNS_PORT = 53;
 	
 	/** The port used to host this server */
-	public int SERVER_PORT;
+	private int SERVER_PORT;
 	
-	public InetAddress SERVER_IP;
+	private InetAddress SERVER_IP;
 	
-	public DatagramSocket serverSocket;
+	private DatagramSocket serverSocket;
 	
 
 	/****************************************************************
@@ -50,7 +53,7 @@ public class DNS_Resolver {
 	 * @throws UnknownHostException throws when unable
 	 * to resolve localhost IPv4 address.
 	 ***************************************************************/
-	public void setLocalIP() throws UnknownHostException{
+	private void setLocalIP() throws UnknownHostException{
 		try {
 			SERVER_IP = InetAddress.getLocalHost();
 		} catch (UnknownHostException he) {
@@ -66,7 +69,7 @@ public class DNS_Resolver {
 	 * @throws SocketException if there is an issue creating
 	 * the serverSocket. Likely the port is already in use.
 	 ***************************************************************/
-	public void initializeServer() throws SocketException {
+	private void initializeServer() throws SocketException {
 		try {
 			serverSocket = new DatagramSocket(SERVER_PORT);
 		} catch (SocketException be) {
@@ -79,7 +82,7 @@ public class DNS_Resolver {
 	/****************************************************************
 	 * Prints a message indicating the server was created properly.
 	 ***************************************************************/
-	public void welcomeMessage() {
+	private void welcomeMessage() {
 		String msg = "Started DNS Resolver on ";
 		msg += SERVER_IP.getHostAddress() + ":" + SERVER_PORT;
 		System.out.println(msg);
@@ -93,7 +96,7 @@ public class DNS_Resolver {
 	 * @return packet containing received data.
 	 * @throws IOException if something goes wrong in receiving.
 	 ***************************************************************/
-	public DatagramPacket receiveMessage() throws IOException {
+	private DatagramPacket receiveMessage() throws IOException {
 		byte[] recvData = new byte[1024];
 		
 		DatagramPacket recvPacket = 
@@ -104,12 +107,18 @@ public class DNS_Resolver {
 		return recvPacket;
 	}
 	
+	/****************************************************************
+	 * Resolver starts listening for UDP packets with DNS queries.
+	 ***************************************************************/
 	public void begin() {
 		DatagramPacket recvPacket = null;
 		
+		/* Once a packet is found it will recursively loop until it
+		 * retrieves in answer or an error. Then, the while loops will
+		 * start listing for more queries. */
 		while (true) {
 			
-			/* Starts listening for data send to the server.
+			/* Starts listening for data sent to the server.
 			 * Restarts the loops and prints error message if
 			 * there is an error receiving the packet. */
 			try {
@@ -121,72 +130,13 @@ public class DNS_Resolver {
 			}
 			
 			// TODO : Interpret data 
-			interpretData(recvPacket);
+			DNS_Packet dnsPacket = new DNS_Packet(recvPacket.getData());
 			
 			// TODO : Message next in line DNS recursively until answer > 0
 			
 		}
 	}
 	
-	public void interpretData(DatagramPacket packet) {
-		byte[] data = packet.getData();
-		
-		System.out.println(Arrays.toString(data));
-		printBinary(data);
-		
-		/* First 16 bits are the ID */
-		String id = "0x" + Integer.toHexString(data[0]) +
-				Integer.toHexString(data[1]);
-		
-		/* Next 16 bits are the FLAGS */
-		handleFlags(data);
-		
-	}
-	
-	/****************************************************************
-	 * Interprets the second two bytes of the DNS packet header 
-	 * containing different flags and codes.
-	 * 
-	 * @param data the array of bytes containing the DNS header
-	 * @return int array containing flag and code values.
-	 * The array is organized as follows: 
-	 *   QR : 0 if query, 1 if response;
-	 *   OPcode : Specifies type of query, 0 for standard;
-	 *   AA : 0 if answer is authoritative;
-	 *   TC : 1 if message was truncated due to UDP size constraints;
-	 *   RD : 1 if recursion is desired;
-	 *   RA : 1 if response server supports recursion;
-	 *   Z : Reserved 3 Bits;
-	 *   Rcode : 0 if query or no error. > 0 indicates error.
-	 ***************************************************************/
-	public int[] handleFlags(byte[] data) {
-		byte b1 = data[2];
-		byte b2 = data[3];
-		
-		// First and second flag byte as binary strings
-		String s1 = Integer.toString(b1, 2);
-		String s2 = Integer.toString(b2, 2);
-		String buff = "00000000";
-		
-		// Combines the two flag bytes into one binary string. The
-		// substring call is used so that each byte has length 8 
-		// with leading zeros.
-		String binaryFlags = (buff + s1).substring(s1.length()) + 
-					   (buff + s2).substring(s2.length());
-		
-		// Set flags from the binary string
-		int QR  = Integer.valueOf(binaryFlags.charAt(0)); 
-		int OPCODE = Integer.valueOf(binaryFlags.substring(1, 5), 2);
-		int AA = Integer.valueOf(binaryFlags.charAt(5));
-		int TC = Integer.valueOf(binaryFlags.charAt(6));
-		int RD = Integer.valueOf(binaryFlags.charAt(7));
-		int RA = Integer.valueOf(binaryFlags.charAt(8));
-		int Z = Integer.valueOf(binaryFlags.substring(9, 12), 2);
-		int RCODE = Integer.valueOf(binaryFlags.substring(12, 16), 2);
-		
-		int[] flags = {QR, OPCODE, AA, TC, RD, RA, Z, RCODE};
-		return flags;
-	}
 	
 	/****************************************************************
 	 * Main method which initializes and runs the DNS Resolver

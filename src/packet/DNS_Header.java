@@ -73,10 +73,11 @@ public class DNS_Header {
 	 ***************************************************************/
 	private void interpretData() {
 		
-		System.out.println(Arrays.toString(data)); // TODO: remove this
+		// TODO: remove this
+		System.out.println("Header: " + Arrays.toString(data)); 
 		
 		/* First 16 bits are the ID */
-		String id = "0x" + Integer.toHexString(data[0]) +
+		ID = "0x" + Integer.toHexString(data[0]) +
 				Integer.toHexString(data[1]);
 		
 		/* Next 16 bits are the FLAGS */
