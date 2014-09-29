@@ -1,13 +1,16 @@
 package main;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.*;
-import java.util.Arrays;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.regex.*;
 
 import packet.DNS_Header;
 import packet.DNS_Packet;
-
-import com.sun.xml.internal.ws.util.StringUtils;
 
 
 /********************************************************************
@@ -18,9 +21,14 @@ import com.sun.xml.internal.ws.util.StringUtils;
  * @author Megan Maher
  * @author Tyler McCarthy
  * 
- * @version Sep 26, 2014
+ * @version Sep 29, 2014
  *******************************************************************/
 public class DNS_Resolver {
+	
+	/** Default root DNS to use in case there is an error reading
+	 * the file containing the list of root DNS. */
+	final InetAddress DEFAULT_ROOT_DNS = 
+			InetAddress.getByName("199.7.91.13");
 	
 	/** The port to query a DNS is  */
 	final static int DNS_PORT = 53;
@@ -88,6 +96,34 @@ public class DNS_Resolver {
 		System.out.println(msg);
 	}
 	
+	private InetAddress[] readRootFile(String path) {
+				
+		BufferedReader br = new BufferedReader(new FileReader(path));
+		
+		String line;
+		while ((line = br.readLine()) != null) {
+			
+		}
+		br.close();
+		
+//		try {
+//			byte[] encodedFile = Files.readAllBytes(Paths.get(path));
+//			rootFile = new String(encodedFile, Charset.defaultCharset());
+//		} catch (IOException e) {
+//			String message = "Error reading file at " + path;
+//			System.err.println(message);
+//			
+//		}
+		
+		String regex = "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b";
+		
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(rootFile);
+		
+		return new InetAddress[] {DEFAULT_ROOT_DNS};
+		//return null;
+	}
+	
 	/****************************************************************
 	 * Creates a DatagramPacket for the server to use to
 	 * receive data. Once the data is received, the packet
@@ -132,8 +168,42 @@ public class DNS_Resolver {
 			// TODO : Interpret data 
 			DNS_Packet dnsPacket = new DNS_Packet(recvPacket.getData());
 			
-			// TODO : Message next in line DNS recursively until answer > 0
+			DNS_Header header = dnsPacket.getHeader();
+			int rcode = header.getRCODE();
 			
+			
+			/* Checks for error */
+			if (rcode != DNS_Header.NO_ERROR) {
+				
+				/* Checks for Name error */
+				if (rcode == DNS_Header.NAME_ERROR) {
+					// TODO print error message including referenced name.
+				}
+				
+				System.err.println("Error in DNS query. RCODE: " + rcode);
+				continue;
+			}
+			
+			header.setRecursionDesired(false);
+			
+			// TODO : Remove this
+			// Prints flags for testing
+			//System.out.println(
+			//	Arrays.toString(dnsPacket.getHeader().getFlags()));
+
+			
+			// TODO : Message next in line DNS recursively until answer > 0
+			recursiveQuery(dnsPacket);
+		}
+	}
+	
+	private void recursiveQuery(DNS_Packet packet) {
+		DNS_Header header = packet.getHeader();
+		
+		if (header.getANCOUNT() > 0) {
+			// end case
+		} else {
+			// recursive
 		}
 	}
 	
