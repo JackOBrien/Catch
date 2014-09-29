@@ -1,12 +1,15 @@
 package main;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Random;
 import java.util.regex.*;
 
 import packet.DNS_Header;
@@ -27,11 +30,13 @@ public class DNS_Resolver {
 	
 	/** Default root DNS to use in case there is an error reading
 	 * the file containing the list of root DNS. */
-	final InetAddress DEFAULT_ROOT_DNS = 
+	private final InetAddress DEFAULT_ROOT_DNS = 
 			InetAddress.getByName("199.7.91.13");
 	
 	/** The port to query a DNS is  */
 	final static int DNS_PORT = 53;
+	
+	private final String PATH = "src/packet/dns.root";
 	
 	/** The port used to host this server */
 	private int SERVER_PORT;
@@ -39,6 +44,8 @@ public class DNS_Resolver {
 	private InetAddress SERVER_IP;
 	
 	private DatagramSocket serverSocket;
+	
+	private InetAddress ROOT_IP;
 	
 
 	/****************************************************************
@@ -51,6 +58,7 @@ public class DNS_Resolver {
 		SERVER_PORT = port;
 		setLocalIP();
 		initializeServer();
+		pickRootDNS();
 		
 		welcomeMessage();
 	}
@@ -96,32 +104,71 @@ public class DNS_Resolver {
 		System.out.println(msg);
 	}
 	
-	private InetAddress[] readRootFile(String path) {
-				
-		BufferedReader br = new BufferedReader(new FileReader(path));
+	/****************************************************************
+	 * Randomly picks a DNS to be used as the root from the given
+	 * root hints file.
+	 ***************************************************************/
+	private void pickRootDNS() {
+		ArrayList<InetAddress> ipArr = null;
 		
+		try {
+			ipArr = readRootFile(PATH);
+		} catch (FileNotFoundException fnf) {
+			System.err.println("File not found at: " + PATH);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		/* Checks for null array. */
+		if (ipArr == null) {
+			ipArr = new ArrayList<InetAddress>();
+		}
+		
+		/* Checks for empty array. */
+		if(ipArr.isEmpty()) {
+			ipArr.add(DEFAULT_ROOT_DNS);
+		}
+		
+		Random rand = new Random();
+		int index = rand.nextInt(ipArr.size());
+		ROOT_IP = ipArr.get(index);
+
+	}
+	
+	/****************************************************************
+	 * TODO: Comment this 
+	 * 
+	 * @param path
+	 * @return
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 ***************************************************************/
+	private ArrayList<InetAddress> readRootFile(String path) 
+			throws FileNotFoundException, IOException {
+				
+		ArrayList<InetAddress> ipArr = new ArrayList<InetAddress>();
+		
+		BufferedReader br = new BufferedReader(new FileReader(path));
 		String line;
+		
+		/* Loops through root DNS file by line looking for IP addresses
+		 * to add to the array of root IPs. */
 		while ((line = br.readLine()) != null) {
+			String regex = "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b";
 			
+			Pattern pattern = Pattern.compile(regex);
+			Matcher matcher = pattern.matcher(line);
+			
+			/* Checks if an IP has been found. */
+			if (matcher.find()) {
+				String ipStr = matcher.group(0);
+				InetAddress ip = InetAddress.getByName(ipStr);
+				ipArr.add(ip);
+			}
 		}
 		br.close();
 		
-//		try {
-//			byte[] encodedFile = Files.readAllBytes(Paths.get(path));
-//			rootFile = new String(encodedFile, Charset.defaultCharset());
-//		} catch (IOException e) {
-//			String message = "Error reading file at " + path;
-//			System.err.println(message);
-//			
-//		}
-		
-		String regex = "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b";
-		
-		Pattern pattern = Pattern.compile(regex);
-		Matcher matcher = pattern.matcher(rootFile);
-		
-		return new InetAddress[] {DEFAULT_ROOT_DNS};
-		//return null;
+		return ipArr;
 	}
 	
 	/****************************************************************
@@ -184,13 +231,8 @@ public class DNS_Resolver {
 				continue;
 			}
 			
+			// Flips the RD bit
 			header.setRecursionDesired(false);
-			
-			// TODO : Remove this
-			// Prints flags for testing
-			//System.out.println(
-			//	Arrays.toString(dnsPacket.getHeader().getFlags()));
-
 			
 			// TODO : Message next in line DNS recursively until answer > 0
 			recursiveQuery(dnsPacket);

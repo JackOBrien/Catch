@@ -17,7 +17,7 @@ public class DNS_Client {
 		
 		InetAddress IPAddress = InetAddress.getByName("127.0.0.1");
 		
-		DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length,IPAddress,9876);
+		DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length,IPAddress,2402);
 		clientSocket.send(sendPacket);
 		byte[] receiveData = new byte[1024];
 		DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);

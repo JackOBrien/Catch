@@ -13,7 +13,7 @@ import java.util.Arrays;
  * @author Megan Maher
  * @author Jack O'Brien
  * 
- * @version Sep 28, 2014
+ * @version Sep 29, 2014
  *******************************************************************/
 public class DNS_Header {
 
@@ -54,6 +54,13 @@ public class DNS_Header {
 	
 	/** Number of entries in the addition records section of the packet. */
 	private int ARCOUNT;
+	
+	/** RCODE value for no error. */
+	public static final int NO_ERROR = 0;
+	
+	/** RCODE value for a name error meaning the name referenced in the 
+	 * query does not exist. */
+	public static final int NAME_ERROR = 3;
 	
 	/** Bytes that make up the DNS header. */
 	private byte[] data;
@@ -114,14 +121,14 @@ public class DNS_Header {
 		// with leading zeros.
 		String binaryFlags = (buff + s1).substring(s1.length()) + 
 					   (buff + s2).substring(s2.length());
-		
+				
 		// Set flags from the binary string
-		QR  = Integer.valueOf(binaryFlags.charAt(0)); 
+		QR  = Character.getNumericValue(binaryFlags.charAt(0));
 		OPCODE = Integer.valueOf(binaryFlags.substring(1, 5), 2);
-		AA = Integer.valueOf(binaryFlags.charAt(5));
-		TC = Integer.valueOf(binaryFlags.charAt(6));
-		RD = Integer.valueOf(binaryFlags.charAt(7));
-		RA = Integer.valueOf(binaryFlags.charAt(8));
+		AA = Character.getNumericValue(binaryFlags.charAt(5));
+		TC = Character.getNumericValue(binaryFlags.charAt(6));
+		RD = Character.getNumericValue(binaryFlags.charAt(7));
+		RA = Character.getNumericValue(binaryFlags.charAt(8));
 		RCODE = Integer.valueOf(binaryFlags.substring(12, 16), 2);
 
 	}
@@ -164,6 +171,14 @@ public class DNS_Header {
 	public int[] getFlags() {
 		return new int[] {QR, OPCODE, AA, TC, RD, RA, RCODE};
 	}
+	
+	
+	/****************************************************************
+	 * @return the response code for this packet header.
+	 ***************************************************************/
+	public int getRCODE() {
+		return RCODE;
+	}
 
 	/****************************************************************
 	 * Returns the number of entries in the question section 
@@ -202,5 +217,19 @@ public class DNS_Header {
 	 ***************************************************************/
 	public int getARCOUNT() {
 		return ARCOUNT;
+	}
+	
+	/****************************************************************
+	 * Sets the Recursion Desired flag according to the parameter. 
+	 * Set to 1 if true, 0 if false. 
+	 * 
+	 * @param flag tells if recursion is desired. 
+	 ***************************************************************/
+	public void setRecursionDesired(boolean desired) {
+		if (desired) {
+			RD = 1;
+		} else{
+			RD = 0;
+		}
 	}
 }
