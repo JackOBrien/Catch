@@ -1,7 +1,6 @@
 package packet;
 
 import java.nio.charset.Charset;
-import java.util.Arrays;
 
 /********************************************************************
  * DNS Question
@@ -75,7 +74,7 @@ public class DNS_Question {
 	}
 	
 	/****************************************************************
-	 * TODO
+	 * Interprets the host name being questioned
 	 ***************************************************************/
 	private void interpretName() {
 				
@@ -108,6 +107,20 @@ public class DNS_Question {
 		}
 				
 		endIndex ++; // Account for the terminator
+	}
+	
+	/****************************************************************
+	 * @return they type of this question.
+	 ***************************************************************/
+	public int getQTYPE() {
+		return QTYPE;
+	}
+	
+	/****************************************************************
+	 * @return the class of this question.
+	 ***************************************************************/
+	public int getQCLASS() {
+		return QCLASS;
 	}
 	
 	/****************************************************************

@@ -293,21 +293,31 @@ public class DNS_Resolver {
 	
 	private void recursiveQuery(DNS_Packet dnsPacket, InetAddress ip) 
 			throws IOException {
-		
 		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
 			// end case
 		} else {
-			sendMessage(dnsPacket, ROOT_IP);
+			sendMessage(dnsPacket, ip);
 			
-			DatagramPacket recvPacket = receiveMessage();
-			byte[] recvData = recvPacket.getData();
+			String fromID = header.getID();
 			
-			dnsPacket = new DNS_Packet(recvData);
+			/* Loops until sender ID matches from ID and message is a
+			 * response. */
+			do {
+				DatagramPacket recvPacket = receiveMessage();
+				byte[] recvData = recvPacket.getData();
+
+				dnsPacket = new DNS_Packet(recvData);
+				header = dnsPacket.getHeader();
+			
+			} while (header.getID() != fromID || header.getFlags()[0] != 1);
+				
+			
 			System.out.println(dnsPacket.getHeader());
 			
 			// Get Ip from answer
+			System.out.println("RDATA: " + dnsPacket.getAdditional().get(0).getRDATA());
 			
 //			recursiveQuery(dnsPacket, nextIp);
 		}
