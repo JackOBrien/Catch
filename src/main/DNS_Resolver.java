@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.regex.*;
 
@@ -34,7 +35,7 @@ public class DNS_Resolver {
 			InetAddress.getByName("199.7.91.13");
 	
 	/** The port to query a DNS is  */
-	final static int DNS_PORT = 53;
+	final int DNS_PORT = 53;
 	
 	private final String PATH = "src/packet/dns.root";
 	
@@ -102,6 +103,10 @@ public class DNS_Resolver {
 		String msg = "Started DNS Resolver on ";
 		msg += SERVER_IP.getHostAddress() + ":" + SERVER_PORT;
 		System.out.println(msg);
+		
+		// Print separator
+		String s = new String(new char[65]).replace("\0", "-");
+		System.out.println(s);
 	}
 	
 	/****************************************************************
@@ -136,7 +141,8 @@ public class DNS_Resolver {
 	}
 	
 	/****************************************************************
-	 * TODO: Comment this 
+	 * Reads a file containing a list of root DNSs. Searches for all 
+	 * IPv4 addresses and adds them to an array of type InetAddress.
 	 * 
 	 * @param path
 	 * @return
@@ -166,6 +172,7 @@ public class DNS_Resolver {
 				ipArr.add(ip);
 			}
 		}
+		
 		br.close();
 		
 		return ipArr;
@@ -218,7 +225,17 @@ public class DNS_Resolver {
 			DNS_Header header = dnsPacket.getHeader();
 			int rcode = header.getRCODE();
 			
+			// Prints out Sender ID
+			System.out.println(">> Received query from: " + 
+					header.getID() + " <<");
 			
+			// Prints out header information
+			System.out.println(header);
+			
+			// Print separator
+			String s = new String(new char[65]).replace("\0", "-");
+			System.out.println(s);
+		
 			/* Checks for error */
 			if (rcode != DNS_Header.NO_ERROR) {
 				
@@ -235,12 +252,38 @@ public class DNS_Resolver {
 			header.setRecursionDesired(false);
 			
 			// TODO : Message next in line DNS recursively until answer > 0
-			recursiveQuery(dnsPacket);
+			try {
+				recursiveQuery(dnsPacket);
+			} catch (IOException e) {
+				String message = "Error when attempting to contact " + 
+						"DNS server";
+				System.err.println(message);
+				continue;
+			}
 		}
 	}
 	
-	private void recursiveQuery(DNS_Packet packet) {
-		DNS_Header header = packet.getHeader();
+	private void recursiveQuery(DNS_Packet dnsPacket) throws IOException {
+		DNS_Header header = dnsPacket.getHeader();
+		
+		byte[] sendData = dnsPacket.getBytes();
+		DatagramPacket sendPacket = new DatagramPacket(sendData,
+				sendData.length, ROOT_IP, DNS_PORT);
+		
+		serverSocket.send(sendPacket);
+		
+		DatagramPacket recvPacket = receiveMessage();
+		byte[] recvData = recvPacket.getData();
+		
+		//TODO Remove this. Prints packet data raw. 
+//		System.out.println("Raw Bytes: " + Arrays.toString(recvData));
+		System.out.println("Forwarding query to Root: " + 
+				ROOT_IP.getHostAddress());
+		
+		
+		dnsPacket = new DNS_Packet(recvData);
+		header = dnsPacket.getHeader();
+
 		
 		if (header.getANCOUNT() > 0) {
 			// end case
