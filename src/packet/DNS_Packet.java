@@ -1,5 +1,7 @@
 package packet;
 
+import java.util.ArrayList;
+
 /********************************************************************
  * DNS Packet
  * Project 3 - CIS 457-10
@@ -17,7 +19,7 @@ public class DNS_Packet {
 
 	private DNS_Header header;
 	
-	private DNS_Question question;
+	private ArrayList<DNS_Question> questions;
 	
 	private DNS_Answer answer;
 	
@@ -30,63 +32,25 @@ public class DNS_Packet {
 	 ***************************************************************/
 	public DNS_Packet(byte[] d) {
 		data = d;
-		header = createHeader();
-//		question = createQuestion();
-//		answer = createAnswer();
+		header = new DNS_Header(d);
+		createQuestions();
+//		answer = new DNS_Answer(d);
 	}
 	
 	/****************************************************************
-	 * Creates a DNS_Header object from the packet bytes.
-	 * 
-	 * @return new DNS_Header modeled from the given bytes.
+	 * Populate the ArrayList of type DNS_Question with all the 
+	 * questions found in this DNS_Packet
 	 ***************************************************************/
-	private DNS_Header createHeader() {
-		byte[] headerData = new byte[DNS_Header.LENGTH];
+	private void createQuestions() {
+		int numQuestions = header.getQDCOUNT();
+		questions = new ArrayList<DNS_Question>();
 		
-		/* Creates a new byte array with only the data needed for the
-		 * DNS header. */
-		for (int i = 0; i < DNS_Header.LENGTH; i++) {
-			headerData[i] = data[i];
+		int endIndex = header.LENGTH;
+		for (int i = 0; i < numQuestions; i++) {
+			DNS_Question q = new DNS_Question(data, endIndex);
+			questions.add(q);
+			endIndex = q.getEndIndex();
 		}
-		
-		return new DNS_Header(headerData);
-	}
-	
-	/****************************************************************
-	 * Creates a DNS_Question object from the packet bytes.
-	 * 
-	 * @return new DNS_Question modeled from the given bytes.
-	 ***************************************************************/
-	private DNS_Question createQuestion() {
-		int start = DNS_Header.LENGTH;
-		byte[] questionData = new byte[DNS_Question.LENGTH];
-		
-		/* Creates a new byte array with only the data needed for the
-		 * DNS question. */
-		for (int i = start; i < start + DNS_Question.LENGTH; i++) {
-			questionData[i - start] = data[i];
-		}
-		
-		return new DNS_Question(questionData);
-	}
-	
-	/****************************************************************
-	 * Creates a DNS_Answer object from the packet bytes.
-	 * 
-	 * @return new DNS_Answer modeled from the given bytes.
-	 ***************************************************************/
-	private DNS_Answer createAnswer() {
-		int startIndex = DNS_Header.LENGTH + DNS_Question.LENGTH;
-		int recordsLength = data.length - startIndex;
-		byte[] recordsData = new byte[recordsLength];
-		
-		/* Creates a new byte array with only the data needed for the
-		 * DNS question. */
-		for (int i = startIndex; i < startIndex + recordsLength; i++) {
-			recordsData[i - startIndex] = data[i];
-		}
-		
-		return new DNS_Answer(recordsData);
 	}
 	
 	/****************************************************************
@@ -94,6 +58,20 @@ public class DNS_Packet {
 	 ***************************************************************/
 	public DNS_Header getHeader() {
 		return header;
+	}
+	
+	/****************************************************************
+	 * @return a string of all the host names being questioned
+	 * in this packet, separated by spaces.
+	 ***************************************************************/
+	public String getNames() {
+		String names = "";
+		
+		for (DNS_Question q : questions) {
+			names += " " +  q.getName();
+		}
+		
+		return names;
 	}
 	
 	/****************************************************************

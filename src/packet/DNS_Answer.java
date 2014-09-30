@@ -19,9 +19,19 @@ public class DNS_Answer {
 	 * of the packet. */
 	private byte[] data;
 	
+	private int length;
+	
 	public DNS_Answer(byte[] d) {
 		data = d;
 	}
 	
 //	private void 
+	
+	/****************************************************************
+	 * TODO find the length
+	 * @return
+	 ***************************************************************/
+	public int getLength() {
+		return length;
+	}
 }

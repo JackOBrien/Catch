@@ -198,6 +198,23 @@ public class DNS_Resolver {
 	}
 	
 	/****************************************************************
+	 * Sends the bytes from the given DNS_PACKET to the given 
+	 * InetAddress. 
+	 * 
+	 * @param packet contains the bytes to be sent.
+	 * @param ip the IPv4 address to send the data to.
+	 * @throws IOException if there is an error sending the packet.
+	 ***************************************************************/
+	private void sendMessage(DNS_Packet packet, InetAddress ip) 
+			throws IOException {
+		byte[] sendData = packet.getBytes();
+		DatagramPacket sendPacket = new DatagramPacket(sendData,
+				sendData.length, ip, DNS_PORT);
+		
+		serverSocket.send(sendPacket);
+	}
+	
+	/****************************************************************
 	 * Resolver starts listening for UDP packets with DNS queries.
 	 ***************************************************************/
 	public void begin() {
@@ -229,6 +246,9 @@ public class DNS_Resolver {
 			System.out.println(">> Received query from: " + 
 					header.getID() + " <<");
 			
+			// Prints out name(s) being queried.
+			System.out.println("Question:" + dnsPacket.getNames());
+			
 			// Prints out header information
 			System.out.println(header);
 			
@@ -241,7 +261,8 @@ public class DNS_Resolver {
 				
 				/* Checks for Name error */
 				if (rcode == DNS_Header.NAME_ERROR) {
-					// TODO print error message including referenced name.
+					System.err.println("Name " + dnsPacket.getNames() + 
+							" does not exsist");
 				}
 				
 				System.err.println("Error in DNS query. RCODE: " + rcode);
@@ -264,32 +285,37 @@ public class DNS_Resolver {
 	}
 	
 	private void recursiveQuery(DNS_Packet dnsPacket) throws IOException {
-		DNS_Header header = dnsPacket.getHeader();
-		
-		byte[] sendData = dnsPacket.getBytes();
-		DatagramPacket sendPacket = new DatagramPacket(sendData,
-				sendData.length, ROOT_IP, DNS_PORT);
-		
-		serverSocket.send(sendPacket);
-		
-		DatagramPacket recvPacket = receiveMessage();
-		byte[] recvData = recvPacket.getData();
-		
-		//TODO Remove this. Prints packet data raw. 
-//		System.out.println("Raw Bytes: " + Arrays.toString(recvData));
 		System.out.println("Forwarding query to Root: " + 
 				ROOT_IP.getHostAddress());
 		
+		recursiveQuery(dnsPacket, ROOT_IP);	
+	}
+	
+	private void recursiveQuery(DNS_Packet dnsPacket, InetAddress ip) 
+			throws IOException {
 		
-		dnsPacket = new DNS_Packet(recvData);
-		header = dnsPacket.getHeader();
-
+		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
 			// end case
 		} else {
-			// recursive
+			sendMessage(dnsPacket, ROOT_IP);
+			
+			DatagramPacket recvPacket = receiveMessage();
+			byte[] recvData = recvPacket.getData();
+			
+			dnsPacket = new DNS_Packet(recvData);
+			System.out.println(dnsPacket.getHeader());
+			
+			// Get Ip from answer
+			
+//			recursiveQuery(dnsPacket, nextIp);
 		}
+		
+		
+		//TODO Remove this. Prints packet data raw. 
+//		System.out.println("Raw Bytes: " + Arrays.toString(recvData));		
+		
 	}
 	
 	
