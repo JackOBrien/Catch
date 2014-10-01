@@ -1,5 +1,7 @@
 package packet;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 
 /********************************************************************
@@ -27,7 +29,7 @@ public class DNS_Answer {
 	
 	private int RDLENGTH;
 	
-	private String RDATA;
+	private InetAddress RDATA;
 	
 	private final int A_TYPE = 1;
 	
@@ -73,29 +75,33 @@ public class DNS_Answer {
 		endIndex += RDLENGTH;
 	}
 	
-	private String interpretRDATA() {
+	private InetAddress interpretRDATA() {
+
+		int len = 0;
+		
 		if (TYPE == A_TYPE) {
-			String ip = Integer.toString(hexBytesToDecimal(
-					new byte[] {data[endIndex], data[endIndex + 1]}));
-			ip += "." + Integer.toString(hexBytesToDecimal(
-					new byte[] {data[endIndex + 2], data[endIndex + 3]}));
-			ip += "." + Integer.toString(hexBytesToDecimal(
-					new byte[] {data[endIndex + 4], data[endIndex + 5]}));
-			ip += "." + Integer.toString(hexBytesToDecimal(
-					new byte[] {data[endIndex + 6], data[endIndex + 7]}));
-			return ip;			
-			
-		} else if (TYPE == NS_TYPE) {
-			String name = "";
-			
-			for (int i = 0; i < RDLENGTH; i++) {
-				name += (char) data[endIndex + i];
-			}
-			
-			return name;
+			len = 4;
+		} else if (TYPE == NS_TYPE){
+			len = RDLENGTH;
+		} else {
+			return null;
 		}
 		
-		return "";
+		byte[] ipArr = new byte[8];
+
+		for (int i = 0; i < ipArr.length; i++) {
+			ipArr[i] = data[endIndex + i];
+		}
+
+		InetAddress ip;
+		try {
+			ip = InetAddress.getByAddress(ipArr);
+		} catch (UnknownHostException e) {
+			ip = InetAddress.getLoopbackAddress();
+		}
+
+		return ip;			
+
 	}
 	
 	private void findNameLength() {
@@ -207,7 +213,7 @@ public class DNS_Answer {
 		return Integer.parseInt(str, 16);
 	}
 	
-	public String getRDATA() {
+	public InetAddress getRDATA() {
 		return RDATA;
 	}
 

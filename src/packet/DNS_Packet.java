@@ -38,9 +38,9 @@ public class DNS_Packet {
 		data = d;
 		header = new DNS_Header(d);
 		createQuestions();
-//		createAnswers();
-//		createAuthorities();
-//		createAdditionals();
+		createAnswers();
+		createAuthorities();
+		createAdditionals();
 	}
 	
 	/****************************************************************

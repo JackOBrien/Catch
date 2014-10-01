@@ -299,30 +299,22 @@ public class DNS_Resolver {
 		if (header.getANCOUNT() > 0) {
 			// end case
 		} else {
-			System.out.println("Befor send");
 			sendMessage(dnsPacket, ip);
-			System.out.println("After send");
 			
-			String fromID = header.getID();
-			
-			/* Loops until sender ID matches from ID and message is a
-			 * response. */
-			do {
-				System.out.println("before recv");
-				DatagramPacket recvPacket = receiveMessage();
-				System.out.println("after recv");
-				byte[] recvData = recvPacket.getData();
+			System.out.println("before recv");
+			DatagramPacket recvPacket = receiveMessage();
+			System.out.println("after recv");
+			byte[] recvData = recvPacket.getData();
 
-				dnsPacket = new DNS_Packet(recvData);
-				header = dnsPacket.getHeader();
-			
-			} while (header.getID() != fromID || header.getFlags()[0] != 1);
-				
+			dnsPacket = new DNS_Packet(recvData);
+			header = dnsPacket.getHeader();				
+
+			System.out.println(Arrays.toString(dnsPacket.getBytes()));
 			
 			System.out.println(dnsPacket.getHeader());
-			
+						
 			// Get Ip from answer
-			System.out.println("RDATA: " + dnsPacket.getAdditional().get(0).getRDATA());
+			System.out.println("RDATA: " + dnsPacket.getAdditional().get(0).getRDATA().getHostAddress());
 			
 //			recursiveQuery(dnsPacket, nextIp);
 		}
