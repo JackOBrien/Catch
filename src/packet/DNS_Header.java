@@ -87,8 +87,8 @@ public class DNS_Header {
 //		System.out.println("Header: " + Arrays.toString(data)); 
 		
 		/* First 16 bits are the ID */
-		ID = Integer.toString(data[0]) +
-				Integer.toString(data[1]);
+		ID = Integer.toString(data[0] & 0xFF) +
+				Integer.toString(data[1] & 0xFF);
 		
 		/* Next 16 bits are the FLAGS */
 		handleFlags();
@@ -115,8 +115,8 @@ public class DNS_Header {
 		byte b2 = data[3];
 		
 		// First and second flag byte as binary strings
-		String s1 = Integer.toString(b1, 2);
-		String s2 = Integer.toString(b2, 2);
+		String s1 = Integer.toString(b1 & 0xFF, 2);
+		String s2 = Integer.toString(b2 & 0xFF, 2);
 		String buff = "00000000";
 		
 		// Combines the two flag bytes into one binary string. The
@@ -147,7 +147,7 @@ public class DNS_Header {
 		String str = "";
 				
 		for (byte b : hex) {
-			str += Integer.toHexString(b);
+			str += Integer.toHexString(b & 0xFF);
 		}
 		
 		return Integer.parseInt(str, 16);
@@ -229,11 +229,21 @@ public class DNS_Header {
 	 * @param flag tells if recursion is desired. 
 	 ***************************************************************/
 	public void setRecursionDesired(boolean desired) {
+		
+		byte flag1 = data[2];
+		String bin = String.format("%8s", Integer.toBinaryString(
+				flag1 & 0xFF)).replace(' ', '0');
+		
 		if (desired) {
 			RD = 1;
 		} else{
 			RD = 0;
 		}
+		
+		bin = bin.substring(0, 7) + RD;
+		short f = Short.parseShort(bin, 2);
+		flag1 = (byte) f;
+		data[2] = flag1;
 	}
 	
 	public String toString() {

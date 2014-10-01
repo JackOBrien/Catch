@@ -50,7 +50,8 @@ public class DNS_Answer {
 	}
 
 	private void interpretData() {
-		readNameField(sIndex); // NAME field
+//		readNameField(sIndex); // NAME field
+		findNameLength();
 		
 		TYPE = hexBytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
@@ -97,6 +98,28 @@ public class DNS_Answer {
 		return "";
 	}
 	
+	private void findNameLength() {
+		
+		for (int i = sIndex; i < data.length; i++) {
+			if (data[i] == 0) {
+				endIndex ++;
+				break;
+			}
+			
+			// Converts current byte into binary to check for pointer
+			String bin = String.format("%8s", Integer.toBinaryString(
+					data[i] & 0xFF)).replace(' ', '0');
+
+			/* Checks for pointer */
+			if (bin.startsWith("11")) {
+				endIndex += 2;
+				break;
+			}
+			
+			endIndex ++;
+		}
+	}
+	
 	private String readNameField(int index) {
 		
 		return readNameField(index, "");
@@ -104,28 +127,41 @@ public class DNS_Answer {
 	
 	private String readNameField(int index, String name) {
 		
-		int labelLen = data[index];
+		int labelLen = data[index] & 0xFF;
+		
+		System.out.println(index + ":" + labelLen);
 		
 		if (labelLen == 0) {
-			return name;
+			return "";
 		} else {
+			
+			
 			// Converts current byte into binary to check for pointer
 			String bin = String.format("%8s", Integer.toBinaryString(
-					data[index] & 0xFF)).replace(' ', '0');
-
+					labelLen)).replace(' ', '0');
+			
 			/* Checks for pointer */
 			if (bin.startsWith("11")) {
 
+				System.out.println("Pointer");
+				
 				// Takes the last 6 bits of the first byte and the entire
 				// second byte in binary, converts it to decimal. The
 				// resulting integer is the number 
 				String binaryPtr = bin.substring(2);
 				binaryPtr += String.format("%8s", Integer.toBinaryString(
-						data[index] & 0xFF)).replace(' ', '0');
+						data[index + 1] & 0xFF)).replace(' ', '0');
 
 				int offset = Integer.parseInt(binaryPtr, 2);
 				
-				return readNameField(offset, name);
+				System.out.println("Offset: " + offset);
+				
+				String gotFromPointer = readNameField(offset, name);
+				System.out.println("GFP: " + gotFromPointer);
+				
+				endIndex += 2;
+				
+				return gotFromPointer ;
 			}
 			
 			byte[] fragment = new byte[labelLen];
@@ -137,22 +173,19 @@ public class DNS_Answer {
 
 			String label = new String(fragment, Charset.defaultCharset());
 
-			/* If it's the first one, don't put a '.' */
-			if (index == sIndex) {
-				name += label;
-			} else {
-				name += "." + label;
-			}
-			
-			index += labelLen;
-			
+			name += "." + label;
+
+			index += labelLen + 1;
+						
 			/* Won't update the endIndex if the method jumps back
 			 * due to a pointer. */
 			if (index > endIndex) {
 				endIndex = index;
 			}
 			
-			return readNameField(index, name);
+			System.out.println("name: " + name);
+			
+			return name += readNameField(index, name);
 		}
 
 	}
@@ -168,7 +201,7 @@ public class DNS_Answer {
 		String str = "";
 				
 		for (byte b : hex) {
-			str += Integer.toHexString(b);
+			str += Integer.toHexString(b & 0xFF);
 		}
 		
 		return Integer.parseInt(str, 16);

@@ -38,9 +38,9 @@ public class DNS_Packet {
 		data = d;
 		header = new DNS_Header(d);
 		createQuestions();
-		createAnswers();
-		createAuthorities();
-		createAdditionals();
+//		createAnswers();
+//		createAuthorities();
+//		createAdditionals();
 	}
 	
 	/****************************************************************
@@ -67,8 +67,12 @@ public class DNS_Packet {
 		int numAnswers = header.getANCOUNT();
 		answers = new ArrayList<DNS_Answer>();
 		
-		// Gets the end index of the last question.
-		int endIndex = questions.get(questions.size() - 1).getEndIndex();
+		int endIndex = 0;
+		
+		if (questions.isEmpty()) 
+			endIndex = header.LENGTH;
+		else
+			endIndex = questions.get(questions.size() - 1).getEndIndex();
 		
 		for (int i = 0; i < numAnswers; i++) {
 			DNS_Answer a = new DNS_Answer(data, endIndex);
@@ -90,10 +94,11 @@ public class DNS_Packet {
 		if (answers.isEmpty()) {
 			if (questions.isEmpty()) {
 				endIndex = header.LENGTH;
+			} else {
+				endIndex = questions.get(questions.size() - 1).getEndIndex();
 			}
-			endIndex = questions.get(questions.size() - 1).getEndIndex();
 		} else {
-			endIndex = answers.get(questions.size() - 1).getEndIndex();
+			endIndex = answers.get(answers.size() - 1).getEndIndex();
 		}
 		
 		for (int i = 0; i < numAuthorities; i++) {
@@ -125,7 +130,7 @@ public class DNS_Packet {
 				endIndex = answers.get(answers.size()-1).getEndIndex();
 			}
 		} else {
-			endIndex = answers.get(questions.size() - 1).getEndIndex();
+			endIndex = authorities.get(authorities.size() - 1).getEndIndex();
 		}
 
 		for (int i = 0; i < numAdditional; i++) {

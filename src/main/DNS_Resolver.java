@@ -192,8 +192,9 @@ public class DNS_Resolver {
 		DatagramPacket recvPacket = 
 				new DatagramPacket(recvData,recvData.length);
 		
+
 		serverSocket.receive(recvPacket);
-		
+
 		return recvPacket;
 	}
 	
@@ -271,7 +272,7 @@ public class DNS_Resolver {
 			
 			// Flips the RD bit
 			header.setRecursionDesired(false);
-			
+						
 			// TODO : Message next in line DNS recursively until answer > 0
 			try {
 				recursiveQuery(dnsPacket);
@@ -298,14 +299,18 @@ public class DNS_Resolver {
 		if (header.getANCOUNT() > 0) {
 			// end case
 		} else {
+			System.out.println("Befor send");
 			sendMessage(dnsPacket, ip);
+			System.out.println("After send");
 			
 			String fromID = header.getID();
 			
 			/* Loops until sender ID matches from ID and message is a
 			 * response. */
 			do {
+				System.out.println("before recv");
 				DatagramPacket recvPacket = receiveMessage();
+				System.out.println("after recv");
 				byte[] recvData = recvPacket.getData();
 
 				dnsPacket = new DNS_Packet(recvData);
