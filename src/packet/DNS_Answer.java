@@ -3,6 +3,7 @@ package packet;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 /********************************************************************
  * DNS Question
@@ -29,11 +30,11 @@ public class DNS_Answer {
 	
 	private int RDLENGTH;
 	
-	private InetAddress RDATA;
+	private String RDATA;
 	
-	private final int A_TYPE = 1;
+	public final int A_TYPE = 1;
 	
-	private final int NS_TYPE = 2;
+	public final int NS_TYPE = 2;
 	
 	/** Bytes that make up the DNS header. */
 	private byte[] data;
@@ -53,6 +54,7 @@ public class DNS_Answer {
 
 	private void interpretData() {
 //		readNameField(sIndex); // NAME field
+		
 		findNameLength();
 		
 		TYPE = hexBytesToDecimal(
@@ -71,11 +73,13 @@ public class DNS_Answer {
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
 		
+		
 		RDATA = interpretRDATA();
 		endIndex += RDLENGTH;
 	}
 	
-	private InetAddress interpretRDATA() {
+	// TODO HANDLE POINTERS DUMMY
+	private String interpretRDATA() {
 
 		int len = 0;
 		
@@ -93,14 +97,14 @@ public class DNS_Answer {
 			ipArr[i] = data[endIndex + i];
 		}
 
-		InetAddress ip;
-		try {
-			ip = InetAddress.getByAddress(ipArr);
-		} catch (UnknownHostException e) {
-			ip = InetAddress.getLoopbackAddress();
-		}
+//		InetAddress ip;
+//		try {
+//			ip = InetAddress.getByAddress(ipArr);
+//		} catch (UnknownHostException e) {
+//			ip = InetAddress.getLoopbackAddress();
+//		}
 
-		return ip;			
+		return Arrays.toString(ipArr);			
 
 	}
 	
@@ -213,11 +217,15 @@ public class DNS_Answer {
 		return Integer.parseInt(str, 16);
 	}
 	
-	public InetAddress getRDATA() {
+	public String getRDATA() {
 		return RDATA;
 	}
 
 	public int getEndIndex() {
 		return endIndex;
+	}
+	
+	public int getType() {
+		return TYPE;
 	}
 }

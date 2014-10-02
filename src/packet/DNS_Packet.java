@@ -27,6 +27,8 @@ public class DNS_Packet {
 	
 	private ArrayList<DNS_Answer> additionals;
 	
+	private ArrayList<DNS_Answer> responses;
+	
 	private byte[] data;
 	
 	/****************************************************************
@@ -38,9 +40,32 @@ public class DNS_Packet {
 		data = d;
 		header = new DNS_Header(d);
 		createQuestions();
-		createAnswers();
-		createAuthorities();
-		createAdditionals();
+//		createAnswers();
+//		createAuthorities();
+//		createAdditionals();
+		createResponses();
+	}
+	
+	private void createResponses() {
+		responses = new ArrayList<DNS_Answer>();
+		int numResponses = header.getANCOUNT() + header.getNSCOUNT() + 
+				header.getARCOUNT();
+		
+		if (numResponses > 0) {
+			
+			int index = header.LENGTH;
+			
+			if (!questions.isEmpty()) {
+				index = questions.get(questions.size()-1).getEndIndex();
+			}
+			
+			
+			for (int i = 0; i < numResponses; i++) {
+				DNS_Answer answer = new DNS_Answer(data, index);
+				index = answer.getEndIndex();
+				responses.add(answer);
+			}
+		}
 	}
 	
 	/****************************************************************
@@ -166,6 +191,10 @@ public class DNS_Packet {
 	 ***************************************************************/
 	public ArrayList<DNS_Answer> getAuthority() {
 		return authorities;
+	}
+	
+	public ArrayList<DNS_Answer> getResponses() {
+		return responses;
 	}
 	
 	/****************************************************************

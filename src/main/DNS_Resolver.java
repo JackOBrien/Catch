@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.regex.*;
 
+import packet.DNS_Answer;
 import packet.DNS_Header;
 import packet.DNS_Packet;
 
@@ -301,20 +302,31 @@ public class DNS_Resolver {
 		} else {
 			sendMessage(dnsPacket, ip);
 			
-			System.out.println("before recv");
 			DatagramPacket recvPacket = receiveMessage();
-			System.out.println("after recv");
 			byte[] recvData = recvPacket.getData();
 
+			for (byte b : recvData) {
+				System.out.print(b & 0xFF);
+				System.out.print(" ");
+			}
+			System.out.println();
+			
 			dnsPacket = new DNS_Packet(recvData);
-			header = dnsPacket.getHeader();				
-
-			System.out.println(Arrays.toString(dnsPacket.getBytes()));
+			header = dnsPacket.getHeader();	
 			
 			System.out.println(dnsPacket.getHeader());
 						
 			// Get Ip from answer
-			System.out.println("RDATA: " + dnsPacket.getAdditional().get(0).getRDATA().getHostAddress());
+			ArrayList<DNS_Answer> ans = dnsPacket.getResponses();
+			for (DNS_Answer a : ans) {
+				if (a.getType() == a.A_TYPE) {
+					System.out.println(a.getRDATA());
+				}
+			}
+			
+//			int indexOfAdditional = header.getNSCOUNT();
+//			String nextIP = dnsPacket.getResponses().get(indexOfAdditional).getRDATA();
+//			System.out.println(nextIP);
 			
 //			recursiveQuery(dnsPacket, nextIp);
 		}
