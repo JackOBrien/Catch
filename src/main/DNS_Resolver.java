@@ -49,6 +49,7 @@ public class DNS_Resolver {
 	
 	private InetAddress ROOT_IP;
 	
+	private DNS_Packet initialPacket;
 
 	/****************************************************************
 	 * Constructor for DNS_Resolver. Sets the port.
@@ -274,10 +275,11 @@ public class DNS_Resolver {
 			// Flips the RD bit
 			header.setRecursionDesired(false);
 						
-			// TODO : Message next in line DNS recursively until answer > 0
+			initialPacket = dnsPacket;
+			
 			try {
 				recursiveQuery(dnsPacket);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				String message = "Error when attempting to contact " + 
 						"DNS server";
 				System.err.println(message);
@@ -286,43 +288,35 @@ public class DNS_Resolver {
 		}
 	}
 	
-	private void recursiveQuery(DNS_Packet dnsPacket) throws IOException {
-		System.out.println("Forwarding query to Root: " + 
-				ROOT_IP.getHostAddress());
+	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
+		System.out.println("Forwarding query to Root DNS");
 		
 		recursiveQuery(dnsPacket, ROOT_IP);	
 	}
 	
 	private void recursiveQuery(DNS_Packet dnsPacket, InetAddress ip) 
-			throws IOException {
+			throws Exception {
 		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
-			// end case
+			System.out.println("Hurray!");
 		} else {
-			sendMessage(dnsPacket, ip);
+			System.out.println("Sending query to: " + ip.getHostAddress());
+			sendMessage(initialPacket, ip);
 			
 			DatagramPacket recvPacket = receiveMessage();
 			byte[] recvData = recvPacket.getData();
-
-			for (byte b : recvData) {
-				System.out.print(b & 0xFF);
-				System.out.print(" ");
-			}
-			System.out.println();
 			
 			dnsPacket = new DNS_Packet(recvData);
 			header = dnsPacket.getHeader();	
 			
+			System.out.println("Got from " + ip.getHostAddress() + ":");
 			System.out.println(dnsPacket.getHeader());
-						
+			System.out.println();			
+			
 			// Get Ip from answer
-			ArrayList<DNS_Answer> ans = dnsPacket.getResponses();
-			for (DNS_Answer a : ans) {
-				if (a.getType() == a.A_TYPE) {
-					System.out.println(a.getRDATA());
-				}
-			}
+			recursiveQuery(dnsPacket, dnsPacket.getResponseIP());
+			
 			
 //			int indexOfAdditional = header.getNSCOUNT();
 //			String nextIP = dnsPacket.getResponses().get(indexOfAdditional).getRDATA();
@@ -330,10 +324,6 @@ public class DNS_Resolver {
 			
 //			recursiveQuery(dnsPacket, nextIp);
 		}
-		
-		
-		//TODO Remove this. Prints packet data raw. 
-//		System.out.println("Raw Bytes: " + Arrays.toString(recvData));		
 		
 	}
 	

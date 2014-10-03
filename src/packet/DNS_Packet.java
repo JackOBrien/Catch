@@ -1,5 +1,7 @@
 package packet;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 /********************************************************************
@@ -21,12 +23,6 @@ public class DNS_Packet {
 	
 	private ArrayList<DNS_Question> questions;
 	
-	private ArrayList<DNS_Answer> answers;
-	
-	private ArrayList<DNS_Answer> authorities;
-	
-	private ArrayList<DNS_Answer> additionals;
-	
 	private ArrayList<DNS_Answer> responses;
 	
 	private byte[] data;
@@ -40,9 +36,6 @@ public class DNS_Packet {
 		data = d;
 		header = new DNS_Header(d);
 		createQuestions();
-//		createAnswers();
-//		createAuthorities();
-//		createAdditionals();
 		createResponses();
 	}
 	
@@ -85,87 +78,6 @@ public class DNS_Packet {
 	}
 	
 	/****************************************************************
-	 * Populate the ArrayList of type DNS_Answer with all the 
-	 * answers found in this DNS_Packet
-	 ***************************************************************/
-	private void createAnswers() {
-		int numAnswers = header.getANCOUNT();
-		answers = new ArrayList<DNS_Answer>();
-		
-		int endIndex = 0;
-		
-		if (questions.isEmpty()) 
-			endIndex = header.LENGTH;
-		else
-			endIndex = questions.get(questions.size() - 1).getEndIndex();
-		
-		for (int i = 0; i < numAnswers; i++) {
-			DNS_Answer a = new DNS_Answer(data, endIndex);
-			answers.add(a);
-			endIndex = a.getEndIndex();
-		}
-	}
-	
-	/****************************************************************
-	 * Populate the ArrayList of type DNS_Answer with all the 
-	 * authority serves found in this DNS_Packet
-	 ***************************************************************/
-	private void createAuthorities() {
-		int numAuthorities = header.getNSCOUNT();
-		authorities = new ArrayList<DNS_Answer>();
-		
-		// Gets the end index of the last answer.
-		int endIndex = 0;
-		if (answers.isEmpty()) {
-			if (questions.isEmpty()) {
-				endIndex = header.LENGTH;
-			} else {
-				endIndex = questions.get(questions.size() - 1).getEndIndex();
-			}
-		} else {
-			endIndex = answers.get(answers.size() - 1).getEndIndex();
-		}
-		
-		for (int i = 0; i < numAuthorities; i++) {
-			DNS_Answer a = new DNS_Answer(data, endIndex);
-			authorities.add(a);
-			endIndex = a.getEndIndex();
-		}
-	}
-	
-	/****************************************************************
-	 * Populate the ArrayList of type DNS_Answer with all the 
-	 * additional sections found in this DNS_Packet
-	 ***************************************************************/
-	private void createAdditionals() {
-		int numAdditional = header.getARCOUNT();
-		additionals = new ArrayList<DNS_Answer>();
-		
-		// Gets the end index of the last answer.
-		// Goes up the line if the above field is empty. I'm sorry it's ugly.
-		int endIndex = 0;
-		if (authorities.isEmpty()) {
-			if (answers.isEmpty()) {
-				if (questions.isEmpty()) {
-					endIndex = header.LENGTH;
-				} else {
-					endIndex = questions.get(questions.size()-1).getEndIndex();
-				}
-			} else {
-				endIndex = answers.get(answers.size()-1).getEndIndex();
-			}
-		} else {
-			endIndex = authorities.get(authorities.size() - 1).getEndIndex();
-		}
-
-		for (int i = 0; i < numAdditional; i++) {
-			DNS_Answer a = new DNS_Answer(data, endIndex);
-			additionals.add(a);
-			endIndex = a.getEndIndex();
-		}
-	}
-	
-	/****************************************************************
 	 * @return DNS_Header object representing the header of this packet.
 	 ***************************************************************/
 	public DNS_Header getHeader() {
@@ -179,29 +91,8 @@ public class DNS_Packet {
 		return questions;
 	}
 	
-	/****************************************************************
-	 * @return list of the answers in this packet.
-	 ***************************************************************/
-	public ArrayList<DNS_Answer> getAnswer() {
-		return answers;
-	}
-	
-	/****************************************************************
-	 * @return list of authority responses in this packet.
-	 ***************************************************************/
-	public ArrayList<DNS_Answer> getAuthority() {
-		return authorities;
-	}
-	
 	public ArrayList<DNS_Answer> getResponses() {
 		return responses;
-	}
-	
-	/****************************************************************
-	 * @return list of additional responses in this packet.
-	 ***************************************************************/
-	public ArrayList<DNS_Answer> getAdditional() {
-		return additionals;
 	}
 	
 	/****************************************************************
@@ -216,6 +107,19 @@ public class DNS_Packet {
 		}
 		
 		return names;
+	}
+	
+	public InetAddress getResponseIP() throws UnknownHostException {
+		String str = "";
+		
+		for (DNS_Answer answ : responses) {
+			if (answ.getType() == answ.A_TYPE) {
+				str = answ.getRDATA();
+				break;
+			}
+		}
+		
+		return InetAddress.getByName(str);
 	}
 	
 	/****************************************************************
