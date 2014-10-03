@@ -49,6 +49,10 @@ public class DNS_Resolver {
 	
 	private InetAddress ROOT_IP;
 	
+	private InetAddress initialIP;
+	
+	private int initialPort;
+	
 	private DNS_Packet initialPacket;
 
 	/****************************************************************
@@ -208,11 +212,11 @@ public class DNS_Resolver {
 	 * @param ip the IPv4 address to send the data to.
 	 * @throws IOException if there is an error sending the packet.
 	 ***************************************************************/
-	private void sendMessage(DNS_Packet packet, InetAddress ip) 
+	private void sendMessage(DNS_Packet packet, InetAddress ip, int port) 
 			throws IOException {
 		byte[] sendData = packet.getBytes();
 		DatagramPacket sendPacket = new DatagramPacket(sendData,
-				sendData.length, ip, DNS_PORT);
+				sendData.length, ip, port);
 		
 		serverSocket.send(sendPacket);
 	}
@@ -239,7 +243,10 @@ public class DNS_Resolver {
 				continue;
 			}
 			
-			// TODO : Interpret data 
+			
+			initialIP = recvPacket.getAddress();
+			initialPort = recvPacket.getPort();
+			
 			DNS_Packet dnsPacket = new DNS_Packet(recvPacket.getData());
 			
 			DNS_Header header = dnsPacket.getHeader();
@@ -299,13 +306,17 @@ public class DNS_Resolver {
 		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
+			
 			System.out.println("--Answers--");
 			for (String addr : dnsPacket.getFinalAnswers()) {
 				System.out.println("->  " + addr);
 			}
+			
+			sendMessage(dnsPacket, initialIP, initialPort);
+			
 		} else {
 			System.out.println("Sending query to: " + ip.getHostAddress());
-			sendMessage(initialPacket, ip);
+			sendMessage(initialPacket, ip, DNS_PORT);
 			
 			DatagramPacket recvPacket = receiveMessage();
 			byte[] recvData = recvPacket.getData();
