@@ -40,6 +40,8 @@ public class DNS_Resolver {
 	
 	private final String PATH = "src/packet/dns.root";
 	
+	private final int TIMEOUT = 2000;
+	
 	/** The port used to host this server */
 	private int SERVER_PORT;
 	
@@ -48,6 +50,8 @@ public class DNS_Resolver {
 	private DatagramSocket serverSocket;
 	
 	private InetAddress ROOT_IP;
+	
+	private ArrayList<InetAddress> rootIPs;
 	
 	private InetAddress initialIP;
 	
@@ -100,6 +104,8 @@ public class DNS_Resolver {
 			message += "\nIs there another instance of this server?";
 			throw new SocketException(message);
 		}
+		
+		serverSocket.setSoTimeout(TIMEOUT);
 	}
 	
 	/****************************************************************
@@ -109,10 +115,6 @@ public class DNS_Resolver {
 		String msg = "Started DNS Resolver on ";
 		msg += SERVER_IP.getHostAddress() + ":" + SERVER_PORT;
 		System.out.println(msg);
-		
-		// Print separator
-		String s = new String(new char[65]).replace("\0", "-");
-		System.out.println(s);
 	}
 	
 	/****************************************************************
@@ -143,7 +145,8 @@ public class DNS_Resolver {
 		Random rand = new Random();
 		int index = rand.nextInt(ipArr.size());
 		ROOT_IP = ipArr.get(index);
-
+		
+		rootIPs = ipArr;
 	}
 	
 	/****************************************************************
@@ -185,26 +188,6 @@ public class DNS_Resolver {
 	}
 	
 	/****************************************************************
-	 * Creates a DatagramPacket for the server to use to
-	 * receive data. Once the data is received, the packet
-	 * is returned. 
-	 * 
-	 * @return packet containing received data.
-	 * @throws IOException if something goes wrong in receiving.
-	 ***************************************************************/
-	private DatagramPacket receiveMessage() throws IOException {
-		byte[] recvData = new byte[1024];
-		
-		DatagramPacket recvPacket = 
-				new DatagramPacket(recvData,recvData.length);
-		
-
-		serverSocket.receive(recvPacket);
-
-		return recvPacket;
-	}
-	
-	/****************************************************************
 	 * Sends the bytes from the given DNS_PACKET to the given 
 	 * InetAddress. 
 	 * 
@@ -219,6 +202,78 @@ public class DNS_Resolver {
 				sendData.length, ip, port);
 		
 		serverSocket.send(sendPacket);
+	}
+
+	/****************************************************************
+	 * Creates a DatagramPacket for the server to use to
+	 * receive data. Once the data is received, the packet
+	 * is returned. 
+	 * 
+	 * @return packet containing received data.
+	 * @throws IOException if something goes wrong in receiving.
+	 * @throws SocketTimeoutException if a packet is not received 
+	 * before the specified timeout.
+	 ***************************************************************/
+	private DatagramPacket receiveMessage() throws IOException, 
+		SocketTimeoutException{
+		
+		byte[] recvData = new byte[1024];
+		
+		DatagramPacket recvPacket = 
+				new DatagramPacket(recvData,recvData.length);
+		
+
+		serverSocket.receive(recvPacket);
+
+		return recvPacket;
+	}
+	
+	private DatagramPacket receiveMessage(int attempts, InetAddress addr) 
+			throws IOException {
+
+		DatagramPacket recvPacket = null;
+		
+		for (int i = 0; i < attempts; i++) {
+
+			if (i > 0) {
+				String message = "Retring receive from: ";
+				System.err.println(message + addr.getHostAddress());
+			}
+			
+			try {
+				recvPacket = receiveMessage();
+				InetAddress recvAddr = recvPacket.getAddress();
+				
+				/* Checks if server receives from another sender. */
+				if (!recvAddr.getHostAddress().equals(addr.getHostAddress())) {
+					System.err.println("Ignoring packet from: " + 
+							recvAddr.getHostAddress());
+					i--;
+					continue;
+				}
+				
+				break;
+			} catch (SocketTimeoutException to) {
+				continue;
+			}
+		}
+		return recvPacket;
+	}
+	
+	private boolean checkError(int rcode, String name) {
+		if (rcode != DNS_Header.NO_ERROR) {
+			
+			/* Checks for Name error */
+			if (rcode == DNS_Header.NAME_ERROR) {
+				System.err.println("Name " + name + " does not exsist");
+				return true;
+			}
+			
+			System.err.println("Error in DNS query. RCODE: " + rcode);
+			return true;
+		}
+		
+		return false;
 	}
 	
 	/****************************************************************
@@ -237,12 +292,13 @@ public class DNS_Resolver {
 			 * there is an error receiving the packet. */
 			try {
 				recvPacket = receiveMessage();
+			} catch (SocketTimeoutException to) {
+				continue;
 			} catch (IOException e) {
 				String message = "Error receiving packet";
 				System.err.println(message);
 				continue;
 			}
-			
 			
 			initialIP = recvPacket.getAddress();
 			initialPort = recvPacket.getPort();
@@ -251,6 +307,10 @@ public class DNS_Resolver {
 			
 			DNS_Header header = dnsPacket.getHeader();
 			int rcode = header.getRCODE();
+			
+			// Print separator
+			String s = new String(new char[65]).replace("\0", "-");
+			System.out.println("\n" + s);
 			
 			// Prints out Sender ID
 			System.out.println(">> Received query from: " + 
@@ -263,21 +323,11 @@ public class DNS_Resolver {
 			System.out.println(header);
 			
 			// Print separator
-			String s = new String(new char[65]).replace("\0", "-");
 			System.out.println(s);
 		
 			/* Checks for error */
-			if (rcode != DNS_Header.NO_ERROR) {
-				
-				/* Checks for Name error */
-				if (rcode == DNS_Header.NAME_ERROR) {
-					System.err.println("Name " + dnsPacket.getNames() + 
-							" does not exsist");
-				}
-				
-				System.err.println("Error in DNS query. RCODE: " + rcode);
-				continue;
-			}
+			boolean error = checkError(rcode, dnsPacket.getNames());
+			if (error) continue;
 			
 			// Flips the RD bit
 			header.setRecursionDesired(false);
@@ -286,6 +336,9 @@ public class DNS_Resolver {
 			
 			try {
 				recursiveQuery(dnsPacket);
+			} catch (IndexOutOfBoundsException iob) {
+				String message = "No response from server";
+				System.err.println(message);
 			} catch (Exception e) {
 				String message = "Error when attempting to contact " + 
 						"DNS server";
@@ -296,29 +349,43 @@ public class DNS_Resolver {
 	}
 	
 	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
-		System.out.println("Forwarding query to Root DNS");
+		System.out.println("-Forwarding query to Root DNS-");
 		
-		recursiveQuery(dnsPacket, ROOT_IP);	
+		recursiveQuery(dnsPacket, 0, rootIPs);	
 	}
 	
-	private void recursiveQuery(DNS_Packet dnsPacket, InetAddress ip) 
-			throws Exception {
+	private void recursiveQuery(DNS_Packet dnsPacket, int index,
+			ArrayList<InetAddress> ipArr) throws Exception {
 		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
 			
 			System.out.println("--Answers--");
 			for (String addr : dnsPacket.getFinalAnswers()) {
+				
+				if (addr.isEmpty()) {
+					addr = "<NON A TYPE>";
+				}
+				
 				System.out.println("->  " + addr);
 			}
 			
 			sendMessage(dnsPacket, initialIP, initialPort);
 			
 		} else {
+			InetAddress ip = ipArr.get(index);
+			
 			System.out.println("Sending query to: " + ip.getHostAddress());
 			sendMessage(initialPacket, ip, DNS_PORT);
 			
-			DatagramPacket recvPacket = receiveMessage();
+			DatagramPacket recvPacket = receiveMessage(2, ip);	
+			
+			/* Checks if the server was unable to receive from the given IP */
+			if (recvPacket == null) {
+				recursiveQuery(dnsPacket, index + 1, ipArr);
+				return;
+			}
+			
 			byte[] recvData = recvPacket.getData();
 			
 			dnsPacket = new DNS_Packet(recvData);
@@ -328,15 +395,7 @@ public class DNS_Resolver {
 			System.out.println(dnsPacket.getHeader());
 			System.out.println();			
 			
-			// Get Ip from answer
-			recursiveQuery(dnsPacket, dnsPacket.getResponseIP());
-			
-			
-//			int indexOfAdditional = header.getNSCOUNT();
-//			String nextIP = dnsPacket.getResponses().get(indexOfAdditional).getRDATA();
-//			System.out.println(nextIP);
-			
-//			recursiveQuery(dnsPacket, nextIp);
+			recursiveQuery(dnsPacket, 0, dnsPacket.getResponseIPs());
 		}
 		
 	}

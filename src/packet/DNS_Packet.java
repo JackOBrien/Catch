@@ -109,17 +109,20 @@ public class DNS_Packet {
 		return names;
 	}
 	
-	public InetAddress getResponseIP() throws UnknownHostException {
-		String str = "";
+	public ArrayList<InetAddress> getResponseIPs() {
+		ArrayList<InetAddress> ipArr = new ArrayList<InetAddress>();
 		
 		for (DNS_Answer answ : responses) {
 			if (answ.getType() == answ.A_TYPE) {
-				str = answ.getRDATA();
-				break;
+				try {
+					ipArr.add(InetAddress.getByName(answ.getRDATA()));
+				} catch (UnknownHostException e) {
+					continue;
+				}
 			}
 		}
 		
-		return InetAddress.getByName(str);
+		return ipArr;
 	}
 	
 	public String[] getFinalAnswers() {
