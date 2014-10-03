@@ -80,32 +80,16 @@ public class DNS_Answer {
 	
 	// TODO HANDLE POINTERS DUMMY
 	private String interpretRDATA() {
-
-		int len = 0;
 		
-		if (TYPE == A_TYPE) {
-			len = 4;
-		} else if (TYPE == NS_TYPE){
-			len = RDLENGTH;
-		} else {
-			return null;
+		String rdata = "";
+		
+		for (int i = 0; i < RDLENGTH; i++) {
+
+			rdata += Integer.toString(data[endIndex + i] & 0xFF);
+			rdata += ".";
 		}
 		
-		byte[] ipArr = new byte[8];
-
-		for (int i = 0; i < ipArr.length; i++) {
-			ipArr[i] = data[endIndex + i];
-		}
-
-//		InetAddress ip;
-//		try {
-//			ip = InetAddress.getByAddress(ipArr);
-//		} catch (UnknownHostException e) {
-//			ip = InetAddress.getLoopbackAddress();
-//		}
-
-		return Arrays.toString(ipArr);			
-
+		return rdata;
 	}
 	
 	private void findNameLength() {
@@ -218,6 +202,13 @@ public class DNS_Answer {
 	}
 	
 	public String getRDATA() {
+		System.out.println("  Type: " + TYPE);
+		System.out.println("  Class: " + CLASS);
+		System.out.println("  TTL: " + TTL);
+		System.out.println("  Len: " + RDLENGTH);
+
+		
+//		RDATA = interpretRDATA();
 		return RDATA;
 	}
 
