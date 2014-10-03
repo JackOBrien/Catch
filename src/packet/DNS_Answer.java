@@ -1,40 +1,46 @@
 package packet;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-
 /********************************************************************
  * DNS Question
  * Project 3 - CIS 457-10
  * 
+ * Object to handle the sections of the packet used for Answers, 
+ * Authority, and Additional responses.
  * 
  * @author Megan Maher
  * @author Tyler McCarthy
  * @author Jack O'Brien
  * 
- * @version Sep 29, 2014
+ * @version Oct 2, 2014
  *******************************************************************/
 public class DNS_Answer {
 	
+	/** Starting index of this answer. */
 	private int sIndex;
 	
+	/** The last index of this answer + 1. The next answer will start
+	 * from this answer's endIndex. */
 	private int endIndex;
 	
+	/** The type code for this answer.  */
 	private int TYPE;
 	
+	/** The class code for this answer. */
 	private int CLASS;
 	
+	/** The time to live in seconds for this answer. */
 	private int TTL;
 	
+	/** The length of the RDATA field. */
 	private int RDLENGTH;
 	
+	/** String representation of the data in the RDATA field. 
+	 * Only implemented for the A type. All other types will be
+	 * set to a blank string. */
 	private String RDATA;
 	
+	/** The value for A type, which is IPv4 */
 	public final int A_TYPE = 1;
-	
-	public final int NS_TYPE = 2;
 	
 	/** Bytes that make up the DNS header. */
 	private byte[] data;
@@ -52,14 +58,17 @@ public class DNS_Answer {
 		interpretData();
 	}
 
-	private void interpretData() {
-//		readNameField(sIndex); // NAME field
-		
+	/****************************************************************
+	 * Sets the values of all this answer's codes and calculates the
+	 * endIndex.
+	 ***************************************************************/
+	private void interpretData() {		
 		findNameLength();
 		
 		TYPE = hexBytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
+		
 		CLASS = hexBytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
@@ -73,28 +82,52 @@ public class DNS_Answer {
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
 		
-		
-		RDATA = interpretRDATA();
 		endIndex += RDLENGTH;
 	}
 	
-	// TODO HANDLE POINTERS DUMMY
+	
+	/****************************************************************
+	 * Implemented only for A type. Will return a blank string for
+	 * all other types. Finds and returns the string representation
+	 * of the data stored in the RDATA field.
+	 * 
+	 * @return string representation of RDATA (IPv4 address).
+	 ***************************************************************/
 	private String interpretRDATA() {
 		
 		String rdata = "";
+		int rdataIndex = endIndex - RDLENGTH;
 		
-		for (int i = 0; i < RDLENGTH; i++) {
-
-			rdata += Integer.toString(data[endIndex + i] & 0xFF);
+		
+		/* Returns early for non A types. */
+		if (TYPE != A_TYPE) return rdata;
+		
+		/* Loops through the RDATA field and converts
+		 * the bytes into integers followed by a period.
+		 * Stops before the last byte in RDATA so that a period
+		 * is not appended to the very end of the string. */
+		for (int i = 0; i < RDLENGTH - 1; i++) {
+			rdata += Integer.toString(data[rdataIndex + i] & 0xFF);
 			rdata += ".";
 		}
+		
+		/* Appends the last byte of the RDATA field to the String. */
+		rdata += Integer.toString(data[rdataIndex + RDLENGTH -1] & 0xFF);
 		
 		return rdata;
 	}
 	
+	/****************************************************************
+	 * Goes through the name field and find the end. The endIndex is
+	 * then set to the end of the name field.
+	 ***************************************************************/
 	private void findNameLength() {
 		
+		/* Loops through the entire packet from the start of
+		 * this answer. */
 		for (int i = sIndex; i < data.length; i++) {
+			
+			/* Breaks the loop when a 0 byte is found. */
 			if (data[i] == 0) {
 				endIndex ++;
 				break;
@@ -114,76 +147,6 @@ public class DNS_Answer {
 		}
 	}
 	
-	private String readNameField(int index) {
-		
-		return readNameField(index, "");
-	}
-	
-	private String readNameField(int index, String name) {
-		
-		int labelLen = data[index] & 0xFF;
-		
-		System.out.println(index + ":" + labelLen);
-		
-		if (labelLen == 0) {
-			return "";
-		} else {
-			
-			
-			// Converts current byte into binary to check for pointer
-			String bin = String.format("%8s", Integer.toBinaryString(
-					labelLen)).replace(' ', '0');
-			
-			/* Checks for pointer */
-			if (bin.startsWith("11")) {
-
-				System.out.println("Pointer");
-				
-				// Takes the last 6 bits of the first byte and the entire
-				// second byte in binary, converts it to decimal. The
-				// resulting integer is the number 
-				String binaryPtr = bin.substring(2);
-				binaryPtr += String.format("%8s", Integer.toBinaryString(
-						data[index + 1] & 0xFF)).replace(' ', '0');
-
-				int offset = Integer.parseInt(binaryPtr, 2);
-				
-				System.out.println("Offset: " + offset);
-				
-				String gotFromPointer = readNameField(offset, name);
-				System.out.println("GFP: " + gotFromPointer);
-				
-				endIndex += 2;
-				
-				return gotFromPointer ;
-			}
-			
-			byte[] fragment = new byte[labelLen];
-
-			// Populate fragment array
-			for (int k = index + 1; k < labelLen + index + 1; k++) {
-				fragment[k - (index + 1)] = data[k];
-			}
-
-			String label = new String(fragment, Charset.defaultCharset());
-
-			name += "." + label;
-
-			index += labelLen + 1;
-						
-			/* Won't update the endIndex if the method jumps back
-			 * due to a pointer. */
-			if (index > endIndex) {
-				endIndex = index;
-			}
-			
-			System.out.println("name: " + name);
-			
-			return name += readNameField(index, name);
-		}
-
-	}
-	
 	/****************************************************************
 	 * Treats bytes given in the array as one hexadecimal number and
 	 * returns the decimal representation.
@@ -201,21 +164,26 @@ public class DNS_Answer {
 		return Integer.parseInt(str, 16);
 	}
 	
+	/****************************************************************
+	 * Calls the method which interprets the RDATA field and returns
+	 * its string. Blank string for all non A types.
+	 * 
+	 * @return the String representation of the RDATA field.
+	 ***************************************************************/
 	public String getRDATA() {
-		System.out.println("  Type: " + TYPE);
-		System.out.println("  Class: " + CLASS);
-		System.out.println("  TTL: " + TTL);
-		System.out.println("  Len: " + RDLENGTH);
-
-		
-//		RDATA = interpretRDATA();
-		return RDATA;
+		return interpretRDATA();
 	}
 
+	/****************************************************************
+	 * @return the last index used by this object + 1
+	 ***************************************************************/
 	public int getEndIndex() {
 		return endIndex;
 	}
 	
+	/****************************************************************
+	 * @return the code of this answer's type.
+	 ***************************************************************/
 	public int getType() {
 		return TYPE;
 	}
