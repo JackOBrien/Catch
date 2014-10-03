@@ -299,7 +299,10 @@ public class DNS_Resolver {
 		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
-			System.out.println("Hurray!");
+			System.out.println("--Answers--");
+			for (String addr : dnsPacket.getFinalAnswers()) {
+				System.out.println("->  " + addr);
+			}
 		} else {
 			System.out.println("Sending query to: " + ip.getHostAddress());
 			sendMessage(initialPacket, ip);

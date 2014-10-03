@@ -122,6 +122,20 @@ public class DNS_Packet {
 		return InetAddress.getByName(str);
 	}
 	
+	public String[] getFinalAnswers() {
+		int numAnswers = header.getANCOUNT();
+		if (numAnswers == 0) return null;
+		
+		String[] answers = new String[numAnswers];
+		
+		for (int i = 0; i < numAnswers; i++) {
+			answers[i] = responses.get(i).getRDATA();
+			
+		}
+		
+		return answers;
+	}
+	
 	/****************************************************************
 	 * @return bytes which make up this DNS packet.
 	 ***************************************************************/
