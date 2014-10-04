@@ -40,7 +40,7 @@ public class DNS_Resolver {
 	
 	private final String PATH = "src/packet/dns.root";
 	
-	private final int TIMEOUT = 2000;
+	private final int TIMEOUT = 3500;
 	
 	/** The port used to host this server */
 	private int SERVER_PORT;
@@ -216,20 +216,19 @@ public class DNS_Resolver {
 	 ***************************************************************/
 	private DatagramPacket receiveMessage() throws IOException, 
 		SocketTimeoutException{
-		
+				
 		byte[] recvData = new byte[1024];
 		
 		DatagramPacket recvPacket = 
 				new DatagramPacket(recvData,recvData.length);
 		
-
 		serverSocket.receive(recvPacket);
 
 		return recvPacket;
 	}
 	
-	private DatagramPacket receiveMessage(int attempts, InetAddress addr) 
-			throws IOException {
+	private DatagramPacket receiveMessage(int attempts, InetAddress addr, 
+			DNS_Packet packet, int port) throws IOException {
 
 		DatagramPacket recvPacket = null;
 		
@@ -241,7 +240,9 @@ public class DNS_Resolver {
 			}
 			
 			try {
+				sendMessage(packet, addr, port);
 				recvPacket = receiveMessage();
+				
 				InetAddress recvAddr = recvPacket.getAddress();
 				
 				/* Checks if server receives from another sender. */
@@ -249,6 +250,7 @@ public class DNS_Resolver {
 					System.err.println("Ignoring packet from: " + 
 							recvAddr.getHostAddress());
 					i--;
+					recvPacket = null;
 					continue;
 				}
 				
@@ -363,6 +365,7 @@ public class DNS_Resolver {
 			System.out.println("--Answers--");
 			for (String addr : dnsPacket.getFinalAnswers()) {
 				
+				/* Checks for non A type */
 				if (addr.isEmpty()) {
 					addr = "<NON A TYPE>";
 				}
@@ -378,7 +381,8 @@ public class DNS_Resolver {
 			System.out.println("Sending query to: " + ip.getHostAddress());
 			sendMessage(initialPacket, ip, DNS_PORT);
 			
-			DatagramPacket recvPacket = receiveMessage(2, ip);	
+			DatagramPacket recvPacket = 
+					receiveMessage(2, ip, dnsPacket, DNS_PORT);	
 			
 			/* Checks if the server was unable to receive from the given IP */
 			if (recvPacket == null) {
@@ -391,7 +395,8 @@ public class DNS_Resolver {
 			dnsPacket = new DNS_Packet(recvData);
 			header = dnsPacket.getHeader();	
 			
-			System.out.println("Got from " + ip.getHostAddress() + ":");
+			System.out.println("Got from " + 
+					recvPacket.getAddress().getHostAddress() + ":");
 			System.out.println(dnsPacket.getHeader());
 			System.out.println();			
 			
@@ -431,29 +436,7 @@ public class DNS_Resolver {
 			System.exit(1);
 		}
     	
-		resolver.begin();
-		
+		// Runs the server.
+		resolver.begin();	
     }
-	
-	
-	/****************************************************************
-	 * Takes an array of bytes and prints out the binary.
-	 * Bytes are separated by '-'.
-	 * 
-	 * TODO : Remove this method before release.
-	 * 
-	 * @param data the bytes to be converted to binary.
-	 ***************************************************************/
-	public static void printBinary(byte[] data){
-		for (int i = 0; i < data.length; i++){
-			byte n = data[i];
-			System.out.print(
-					String.format("%8s", 
-							Integer.toBinaryString(n & 0xFF)).replace(' ', '0'));
-			System.out.print("-");
-		}
-		
-		System.out.println("\nEND");
-	}
-
 }
