@@ -131,7 +131,7 @@ public class DNS_Resolver {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+				
 		/* Checks for null array. */
 		if (ipArr == null) {
 			ipArr = new ArrayList<InetAddress>();
@@ -147,6 +147,14 @@ public class DNS_Resolver {
 		ROOT_IP = ipArr.get(index);
 		
 		rootIPs = ipArr;
+		
+		rootIPs = new ArrayList<InetAddress>();
+		try {
+			rootIPs.add(InetAddress.getByName("148.61.1.10"));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/****************************************************************
@@ -353,6 +361,8 @@ public class DNS_Resolver {
 	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
 		System.out.println("-Forwarding query to Root DNS-");
 		
+		// Starts at 1 because we've had bad luck with the first
+		// root DNS listed
 		recursiveQuery(dnsPacket, 0, rootIPs);	
 	}
 	
