@@ -1,27 +1,15 @@
 package main;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.*;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.regex.*;
 
-import javax.swing.Timer;
-import javax.swing.plaf.basic.BasicSplitPaneUI.KeyboardHomeHandler;
-
 import cache.Cache;
-import cache.Cache_Entry;
-import packet.DNS_Answer;
 import packet.DNS_Header;
 import packet.DNS_Packet;
 
@@ -357,7 +345,7 @@ public class DNS_Resolver {
 			
 			// Prints out name(s) being queried.
 			initialName = dnsPacket.getNames();
-			System.out.println("Question:" + initialName);
+			System.out.println("Question: " + initialName);
 			
 			// Prints out header information
 			System.out.println(header);
@@ -377,7 +365,8 @@ public class DNS_Resolver {
 			try {
 				recursiveQuery(dnsPacket);
 			} catch (IndexOutOfBoundsException iob) {
-				iob.printStackTrace();
+				// TODO :  remove stack trace
+//				iob.printStackTrace();
 				String message = "No response from server";
 				System.err.println(message);
 			} catch (Exception e) {
@@ -393,13 +382,27 @@ public class DNS_Resolver {
 	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
 		
 		/* Check for answers */
-		
+		DNS_Packet answPacket = cache.findAnswer(initialName);
+		if (answPacket != null) {
+			
+			// Initial packet ID
+			byte[] initialID = initialPacket.getHeader().getIdArr();
+			
+			// Sets answer packet's id to match the initial's
+			answPacket.getHeader().setID(initialID);
+			
+			System.out.println("-Cached answer for: " + initialName + "-");
+			
+			sendAnswers(answPacket);
+			return;
+		}
 		
 		/* Check cache */
 		ArrayList<InetAddress> cachedIps = cache.findName(initialName);
 		
 		if (!cachedIps.isEmpty()) {
-			System.out.println("AHFASFJHASF");
+			String ip = cachedIps.get(0).getHostAddress();
+			System.out.println("-Cache entry for: " + ip + "-");
 			recursiveQuery(dnsPacket, 0, cachedIps);	
 			return;
 		}
@@ -417,6 +420,12 @@ public class DNS_Resolver {
 			sendAnswers(dnsPacket);
 			
 		} else {	
+			
+			if (ipArr.isEmpty()) {
+				String message = "No A type responses given";
+				System.err.println(message);
+				return;
+			}
 			
 			InetAddress ip = ipArr.get(index);
 			

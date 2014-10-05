@@ -103,7 +103,7 @@ public class DNS_Packet {
 		String names = "";
 		
 		for (DNS_Question q : questions) {
-			names += " " +  q.getName();
+			names += q.getName();
 		}
 		
 		return names;

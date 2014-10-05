@@ -71,7 +71,7 @@ public class Cache {
 			
 			String name = answ.getName();
 			
-			answers.add(new Cache_Entry(TTD, IP, name));
+			answers.add(new Cache_Entry(TTD, IP, name, packet));
 		}
 		
 	}
@@ -99,11 +99,25 @@ public class Cache {
 		
 		return ipArr;
 	}
+	
+	public DNS_Packet findAnswer(String name) {
+		
+		DNS_Packet packet = null;
+		
+		for (Cache_Entry entry : answers) {
+			if (entry.getName().equals(name)) {
+				packet = entry.getPacket();
+				break;
+			}
+		}
+		
+		return packet;
+	}
 		
 	public String toString() {
-		for (Cache_Entry entry : cache) {
-			
-		}
+//		for (Cache_Entry entry : cache) {
+//			
+//		}
 		
 		return "";
 	}
