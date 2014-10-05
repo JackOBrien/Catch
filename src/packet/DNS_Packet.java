@@ -113,7 +113,7 @@ public class DNS_Packet {
 		ArrayList<InetAddress> ipArr = new ArrayList<InetAddress>();
 		
 		for (DNS_Answer answ : responses) {
-			if (answ.getType() == answ.A_TYPE) {
+			if (answ.getType() == DNS_Answer.A_TYPE) {
 				try {
 					ipArr.add(InetAddress.getByName(answ.getRDATA()));
 				} catch (UnknownHostException e) {
@@ -123,6 +123,22 @@ public class DNS_Packet {
 		}
 		
 		return ipArr;
+	}
+	
+	public ArrayList<DNS_Answer> getAnswers(int type) {
+		
+		if (type != DNS_Answer.A_TYPE && type != DNS_Answer.NS_TYPE)
+			return null;
+		
+		ArrayList<DNS_Answer> answers = new ArrayList<DNS_Answer>();
+		
+		for (DNS_Answer answ : responses) {
+			if (answ.getType() == type) {
+				answers.add(answ);
+			}
+		}
+		
+		return answers;
 	}
 	
 	public String[] getFinalAnswers() {

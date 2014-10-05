@@ -1,5 +1,7 @@
 package main;
 
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -11,8 +13,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.regex.*;
 
+import javax.swing.Timer;
+import javax.swing.plaf.basic.BasicSplitPaneUI.KeyboardHomeHandler;
+
+import cache.Cache;
+import cache.Cache_Entry;
 import packet.DNS_Answer;
 import packet.DNS_Header;
 import packet.DNS_Packet;
@@ -26,7 +34,7 @@ import packet.DNS_Packet;
  * @author Megan Maher
  * @author Tyler McCarthy
  * 
- * @version Sep 29, 2014
+ * @version Oct 4, 2014
  *******************************************************************/
 public class DNS_Resolver {
 	
@@ -58,7 +66,13 @@ public class DNS_Resolver {
 	private int initialPort;
 	
 	private DNS_Packet initialPacket;
-
+	
+	private String initialName;
+	
+	private Cache cache;
+	
+	private long startTime;
+	
 	/****************************************************************
 	 * Constructor for DNS_Resolver. Sets the port.
 	 * 
@@ -70,6 +84,8 @@ public class DNS_Resolver {
 		setLocalIP();
 		initializeServer();
 		pickRootDNS();
+		
+		cache = new Cache();
 		
 		welcomeMessage();
 	}
@@ -237,10 +253,10 @@ public class DNS_Resolver {
 			if (i > 0) {
 				String message = "Retring receive from: ";
 				System.err.println(message + addr.getHostAddress());
+				sendMessage(packet, addr, port);
 			}
 			
 			try {
-				sendMessage(packet, addr, port);
 				recvPacket = receiveMessage();
 				
 				InetAddress recvAddr = recvPacket.getAddress();
@@ -278,11 +294,31 @@ public class DNS_Resolver {
 		return false;
 	}
 	
+	private void sendAnswers(DNS_Packet dnsPacket) throws IOException {
+		System.out.println("--Answers--");
+		for (String addr : dnsPacket.getFinalAnswers()) {
+			
+			/* Checks for non A type */
+			if (addr.isEmpty()) {
+				addr = "<NON A TYPE>";
+			}
+			
+			System.out.println("->  " + addr);
+		}
+		
+		/* Add to cache */
+		cache.addAnswer(dnsPacket, startTime);
+		
+		sendMessage(dnsPacket, initialIP, initialPort);
+	}
+	
 	/****************************************************************
 	 * Resolver starts listening for UDP packets with DNS queries.
 	 ***************************************************************/
 	public void begin() {
 		DatagramPacket recvPacket = null;
+		
+		startTime = System.currentTimeMillis() / 1000;
 		
 		/* Once a packet is found it will recursively loop until it
 		 * retrieves in answer or an error. Then, the while loops will
@@ -295,6 +331,7 @@ public class DNS_Resolver {
 			try {
 				recvPacket = receiveMessage();
 			} catch (SocketTimeoutException to) {
+				
 				continue;
 			} catch (IOException e) {
 				String message = "Error receiving packet";
@@ -319,7 +356,8 @@ public class DNS_Resolver {
 					header.getID() + " <<");
 			
 			// Prints out name(s) being queried.
-			System.out.println("Question:" + dnsPacket.getNames());
+			initialName = dnsPacket.getNames();
+			System.out.println("Question:" + initialName);
 			
 			// Prints out header information
 			System.out.println(header);
@@ -339,9 +377,11 @@ public class DNS_Resolver {
 			try {
 				recursiveQuery(dnsPacket);
 			} catch (IndexOutOfBoundsException iob) {
+				iob.printStackTrace();
 				String message = "No response from server";
 				System.err.println(message);
 			} catch (Exception e) {
+				e.printStackTrace();
 				String message = "Error when attempting to contact " + 
 						"DNS server";
 				System.err.println(message);
@@ -351,8 +391,20 @@ public class DNS_Resolver {
 	}
 	
 	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
-		System.out.println("-Forwarding query to Root DNS-");
 		
+		/* Check for answers */
+		
+		
+		/* Check cache */
+		ArrayList<InetAddress> cachedIps = cache.findName(initialName);
+		
+		if (!cachedIps.isEmpty()) {
+			System.out.println("AHFASFJHASF");
+			recursiveQuery(dnsPacket, 0, cachedIps);	
+			return;
+		}
+		
+		System.out.println("-Forwarding query to Root DNS-");
 		recursiveQuery(dnsPacket, 0, rootIPs);	
 	}
 	
@@ -362,20 +414,10 @@ public class DNS_Resolver {
 		
 		if (header.getANCOUNT() > 0) {
 			
-			System.out.println("--Answers--");
-			for (String addr : dnsPacket.getFinalAnswers()) {
-				
-				/* Checks for non A type */
-				if (addr.isEmpty()) {
-					addr = "<NON A TYPE>";
-				}
-				
-				System.out.println("->  " + addr);
-			}
+			sendAnswers(dnsPacket);
 			
-			sendMessage(dnsPacket, initialIP, initialPort);
+		} else {	
 			
-		} else {
 			InetAddress ip = ipArr.get(index);
 			
 			System.out.println("Sending query to: " + ip.getHostAddress());
@@ -399,6 +441,9 @@ public class DNS_Resolver {
 					recvPacket.getAddress().getHostAddress() + ":");
 			System.out.println(dnsPacket.getHeader());
 			System.out.println();			
+			
+			/* Add to cache */
+			cache.addPacket(dnsPacket, startTime);
 			
 			recursiveQuery(dnsPacket, 0, dnsPacket.getResponseIPs());
 		}

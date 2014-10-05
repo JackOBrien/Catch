@@ -1,5 +1,7 @@
 package packet;
 
+import java.nio.charset.Charset;
+
 /********************************************************************
  * DNS Question
  * Project 3 - CIS 457-10
@@ -22,6 +24,8 @@ public class DNS_Answer {
 	 * from this answer's endIndex. */
 	private int endIndex;
 	
+	private String name;
+	
 	/** The type code for this answer.  */
 	private int TYPE;
 	
@@ -40,7 +44,10 @@ public class DNS_Answer {
 	private String RDATA;
 	
 	/** The value for A type, which is IPv4 */
-	public final int A_TYPE = 1;
+	public static final int A_TYPE = 1;
+	
+	/** The value for NS type */
+	public static final int NS_TYPE = 2;
 	
 	/** Bytes that make up the DNS header. */
 	private byte[] data;
@@ -65,6 +72,8 @@ public class DNS_Answer {
 	private void interpretData() {		
 		findNameLength();
 		
+		name = readNameField(sIndex);
+		
 		TYPE = hexBytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
@@ -85,7 +94,6 @@ public class DNS_Answer {
 		endIndex += RDLENGTH;
 	}
 	
-	
 	/****************************************************************
 	 * Implemented only for A type. Will return a blank string for
 	 * all other types. Finds and returns the string representation
@@ -99,20 +107,26 @@ public class DNS_Answer {
 		int rdataIndex = endIndex - RDLENGTH;
 		
 		
-		/* Returns early for non A types. */
-		if (TYPE != A_TYPE) return rdata;
+		/* Checks for A type */
+		if (TYPE == A_TYPE) {		
+			
+			/* Loops through the RDATA field and converts
+			 * the bytes into integers followed by a period.
+			 * Stops before the last byte in RDATA so that a period
+			 * is not appended to the very end of the string. */
+			for (int i = 0; i < RDLENGTH - 1; i++) {
+				rdata += Integer.toString(data[rdataIndex + i] & 0xFF);
+				rdata += ".";
+			}
+
+			/* Appends the last byte of the RDATA field to the String. */
+			rdata += Integer.toString(data[rdataIndex + RDLENGTH -1] & 0xFF);
+		} 
 		
-		/* Loops through the RDATA field and converts
-		 * the bytes into integers followed by a period.
-		 * Stops before the last byte in RDATA so that a period
-		 * is not appended to the very end of the string. */
-		for (int i = 0; i < RDLENGTH - 1; i++) {
-			rdata += Integer.toString(data[rdataIndex + i] & 0xFF);
-			rdata += ".";
+		/* Checks for NS type */
+		else if (TYPE == NS_TYPE) {
+			rdata = readNameField(rdataIndex);
 		}
-		
-		/* Appends the last byte of the RDATA field to the String. */
-		rdata += Integer.toString(data[rdataIndex + RDLENGTH -1] & 0xFF);
 		
 		return rdata;
 	}
@@ -145,6 +159,64 @@ public class DNS_Answer {
 			
 			endIndex ++;
 		}
+	}
+
+	private String readNameField(int index) {
+
+		String name = readNameField(index, "");
+		
+		if (name.endsWith("."))
+			name = name.substring(0, name.length() -1);
+		
+		return name;
+	}
+
+	private String readNameField(int index, String name) {
+
+		int labelLen = data[index] & 0xFF;
+
+		if (labelLen == 0) {
+			return "";
+		} else {
+
+
+			// Converts current byte into binary to check for pointer
+			String bin = String.format("%8s", Integer.toBinaryString(
+					labelLen)).replace(' ', '0');
+
+			/* Checks for pointer */
+			if (bin.startsWith("11")) {
+
+				// Takes the last 6 bits of the first byte and the entire
+				// second byte in binary, converts it to decimal. The
+				// resulting integer is the number 
+				String binaryPtr = bin.substring(2);
+				binaryPtr += String.format("%8s", Integer.toBinaryString(
+						data[index + 1] & 0xFF)).replace(' ', '0');
+
+				int offset = Integer.parseInt(binaryPtr, 2);
+
+				String gotFromPointer = readNameField(offset, name);
+
+				return gotFromPointer ;
+			}
+
+			byte[] fragment = new byte[labelLen];
+
+			// Populate fragment array
+			for (int k = index + 1; k < labelLen + index + 1; k++) {
+				fragment[k - (index + 1)] = data[k];
+			}
+
+			String label = new String(fragment, Charset.defaultCharset());
+
+			name += label + ".";
+
+			index += labelLen + 1;
+
+			return name += readNameField(index, "");
+		}
+
 	}
 	
 	/****************************************************************
@@ -186,5 +258,13 @@ public class DNS_Answer {
 	 ***************************************************************/
 	public int getType() {
 		return TYPE;
+	}
+	
+	public int getTTL() {
+		return TTL;
+	}
+	
+	public String getName() {
+		return name;
 	}
 }
