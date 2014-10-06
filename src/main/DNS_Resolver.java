@@ -44,9 +44,7 @@ public class DNS_Resolver {
 	private InetAddress SERVER_IP;
 	
 	private DatagramSocket serverSocket;
-	
-	private InetAddress ROOT_IP;
-	
+		
 	private ArrayList<InetAddress> rootIPs;
 	
 	private InetAddress initialIP;
@@ -58,9 +56,7 @@ public class DNS_Resolver {
 	private String initialName;
 	
 	private Cache cache;
-	
-	private long startTime;
-	
+		
 	/****************************************************************
 	 * Constructor for DNS_Resolver. Sets the port.
 	 * 
@@ -71,7 +67,7 @@ public class DNS_Resolver {
 		SERVER_PORT = port;
 		setLocalIP();
 		initializeServer();
-		pickRootDNS();
+		rootIPs = readRootFile(PATH);
 		
 		cache = new Cache();
 		
@@ -119,38 +115,6 @@ public class DNS_Resolver {
 		String msg = "Started DNS Resolver on ";
 		msg += SERVER_IP.getHostAddress() + ":" + SERVER_PORT;
 		System.out.println(msg);
-	}
-	
-	/****************************************************************
-	 * Randomly picks a DNS to be used as the root from the given
-	 * root hints file.
-	 ***************************************************************/
-	private void pickRootDNS() {
-		ArrayList<InetAddress> ipArr = null;
-		
-		try {
-			ipArr = readRootFile(PATH);
-		} catch (FileNotFoundException fnf) {
-			System.err.println("File not found at: " + PATH);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		/* Checks for null array. */
-		if (ipArr == null) {
-			ipArr = new ArrayList<InetAddress>();
-		}
-		
-		/* Checks for empty array. */
-		if(ipArr.isEmpty()) {
-			ipArr.add(DEFAULT_ROOT_DNS);
-		}
-		
-		Random rand = new Random();
-		int index = rand.nextInt(ipArr.size());
-		ROOT_IP = ipArr.get(index);
-		
-		rootIPs = ipArr;
 	}
 	
 	/****************************************************************
@@ -203,7 +167,7 @@ public class DNS_Resolver {
 			throws IOException {
 		byte[] sendData = packet.getBytes();
 		DatagramPacket sendPacket = new DatagramPacket(sendData,
-				sendData.length, ip, port);
+				packet.getLength(), ip, port);
 		
 		serverSocket.send(sendPacket);
 	}
@@ -310,9 +274,7 @@ public class DNS_Resolver {
 	 ***************************************************************/
 	public void begin() {
 		DatagramPacket recvPacket = null;
-		
-		startTime = System.currentTimeMillis() / 1000;
-		
+				
 		/* Once a packet is found it will recursively loop until it
 		 * retrieves in answer or an error. Then, the while loops will
 		 * start listing for more queries. */
@@ -335,7 +297,8 @@ public class DNS_Resolver {
 			initialIP = recvPacket.getAddress();
 			initialPort = recvPacket.getPort();
 			
-			DNS_Packet dnsPacket = new DNS_Packet(recvPacket.getData());
+			DNS_Packet dnsPacket = new DNS_Packet(
+					recvPacket.getData(), recvPacket.getLength());
 			
 			DNS_Header header = dnsPacket.getHeader();
 			int rcode = header.getRCODE();
@@ -450,7 +413,7 @@ public class DNS_Resolver {
 			
 			byte[] recvData = recvPacket.getData();
 			
-			dnsPacket = new DNS_Packet(recvData);
+			dnsPacket = new DNS_Packet(recvData, recvPacket.getLength());
 			header = dnsPacket.getHeader();	
 			
 			System.out.println("Got from " + 

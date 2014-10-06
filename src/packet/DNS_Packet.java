@@ -27,6 +27,8 @@ public class DNS_Packet {
 	
 	private byte[] data;
 	
+	private int dataLength;
+	
 	/****************************************************************
 	 * Constructor for DNS_Packet.
 	 * 
@@ -34,6 +36,15 @@ public class DNS_Packet {
 	 ***************************************************************/
 	public DNS_Packet(byte[] d) {
 		data = d;
+		dataLength = 512;
+		header = new DNS_Header(d);
+		createQuestions();
+		createResponses();
+	}
+	
+	public DNS_Packet(byte[] d, int length) {
+		data = d;
+		dataLength = length;
 		header = new DNS_Header(d);
 		createQuestions();
 		createResponses();
@@ -171,5 +182,13 @@ public class DNS_Packet {
 	 ***************************************************************/
 	public byte[] getBytes() {
 		return data;
+	}
+	
+	public int getLength() {
+		return dataLength;
+	}
+	
+	public void setLength(int length) {
+		dataLength = length;
 	}
 }
