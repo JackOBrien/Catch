@@ -88,18 +88,31 @@ public class DNS_Packet {
 		}
 	}
 	
+	public String getCNAME() {
+		
+		for (DNS_Answer a : responses) {
+			if (a.getType() == DNS_Answer.CNAME_TYPE) {
+				return a.getRDATA();
+			}
+		}
+		
+		return "";
+	}
+	
+	public void setQuestionName(String name) {
+		int size = data.length;
+		DNS_Question q = questions.get(0);
+		q.setName(name);
+		data = q.getData();
+		size = data.length - size;
+		dataLength += size;
+	}
+	
 	/****************************************************************
 	 * @return DNS_Header object representing the header of this packet.
 	 ***************************************************************/
 	public DNS_Header getHeader() {
 		return header;
-	}
-	
-	/****************************************************************
-	 * @return list of the questions in this packet.
-	 ***************************************************************/
-	public ArrayList<DNS_Question> getQuestion() {
-		return questions;
 	}
 	
 	public ArrayList<DNS_Answer> getResponses() {

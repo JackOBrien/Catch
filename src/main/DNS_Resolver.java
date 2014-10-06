@@ -6,12 +6,14 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.regex.*;
 
 import cache.Cache;
 import packet.DNS_Header;
 import packet.DNS_Packet;
+import packet.DNS_Question;
 
 
 /********************************************************************
@@ -52,6 +54,8 @@ public class DNS_Resolver {
 	private int initialPort;
 	
 	private DNS_Packet initialPacket;
+	
+	private DNS_Packet initialPacket2;
 	
 	private String initialName;
 	
@@ -300,6 +304,9 @@ public class DNS_Resolver {
 			DNS_Packet dnsPacket = new DNS_Packet(
 					recvPacket.getData(), recvPacket.getLength());
 			
+			initialPacket2 = new DNS_Packet(
+					recvPacket.getData(), recvPacket.getLength());
+			
 			DNS_Header header = dnsPacket.getHeader();
 			int rcode = header.getRCODE();
 			
@@ -386,6 +393,15 @@ public class DNS_Resolver {
 		DNS_Header header = dnsPacket.getHeader();
 		
 		if (header.getANCOUNT() > 0) {
+			
+			String cname = dnsPacket.getCNAME();
+			if (!cname.isEmpty()) {
+				initialPacket2.getHeader().setID(dnsPacket.getBytes());
+				initialPacket2.setQuestionName(cname);
+				initialPacket2.getHeader().setRecursionDesired(false);
+				recursiveQuery(initialPacket2);
+				return;
+			}
 			
 			sendAnswers(dnsPacket);
 			

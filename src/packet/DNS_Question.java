@@ -1,6 +1,9 @@
 package packet;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 /********************************************************************
  * DNS Question
@@ -20,6 +23,8 @@ public class DNS_Question {
 	
 	/** The index marking the end of this section of the packet. */
 	private int endIndex;
+	
+	private int nameLength;
 	
 	private int QTYPE;
 	
@@ -107,6 +112,48 @@ public class DNS_Question {
 		}
 				
 		endIndex ++; // Account for the terminator
+		
+		nameLength = endIndex - sIndex;
+	}
+	
+	protected void setName (String URL) {
+		ArrayList<Byte> byteList = new ArrayList<Byte>();
+		
+		/* Converts byte array to an ArrayList of type Byte */
+		for (byte b : data) {
+			byteList.add(new Byte(b));
+		}
+		
+		/* Remove old name from ArrayList */
+		for (int i = 0; i < nameLength; i++) {
+			byteList.remove(sIndex);
+		}
+		
+		String[] strArr = URL.split("\\.");
+		
+		int index = sIndex;
+		
+		for (String s : strArr) {
+			int length = s.length();
+			byteList.add(index, new Byte((byte) length));
+			index ++;
+			
+			for (int i = 0; i < length; i++) {
+				char c = s.charAt(i);
+				byte b = (byte) ((int) c);
+				byteList.add(index, new Byte(b));
+				index ++;
+			}
+		}
+		byteList.add(index, new Byte((byte) 0));
+		
+		data = new byte[byteList.size()];
+		
+		for (int i = 0; i < byteList.size(); i++) {
+			data[i] = byteList.get(i).byteValue();
+		}
+		
+		interpretName();
 	}
 	
 	/****************************************************************
@@ -138,5 +185,9 @@ public class DNS_Question {
 		}
 		
 		return Integer.parseInt(str, 16);
+	}
+	
+	public byte[] getData() {
+		return data;
 	}
 }

@@ -246,6 +246,23 @@ public class DNS_Header {
 		data[2] = flag1;
 	}
 	
+	public void setQR(boolean response) {
+		byte flag1 = data[2];
+		String bin = String.format("%8s", Integer.toBinaryString(
+				flag1 & 0xFF)).replace(' ', '0');
+		
+		if (response) {
+			QR = 1;
+		} else{
+			QR = 0;
+		}
+		
+		bin = QR + bin.substring(1, 8);
+		short f = Short.parseShort(bin, 2);
+		flag1 = (byte) f;
+		data[2] = flag1;
+	}
+	
 	public void setID(byte[] bytes) {		
 		
 		if (bytes.length != 2) {

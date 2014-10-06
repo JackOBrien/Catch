@@ -50,6 +50,8 @@ public class DNS_Answer {
 	/** The value for NS type */
 	public static final int NS_TYPE = 2;
 	
+	public static final int CNAME_TYPE = 5;
+	
 	/** Bytes that make up the DNS header. */
 	private byte[] data;
 	
@@ -124,8 +126,8 @@ public class DNS_Answer {
 			rdata += Integer.toString(data[rdataIndex + RDLENGTH -1] & 0xFF);
 		} 
 		
-		/* Checks for NS type */
-		else if (TYPE == NS_TYPE) {
+		/* Checks for NS or CNAME type */
+		else if (TYPE == NS_TYPE || TYPE == CNAME_TYPE) {
 			rdata = readNameField(rdataIndex);
 		}
 		
