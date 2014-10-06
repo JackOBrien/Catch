@@ -276,6 +276,12 @@ public class DNS_Header {
 	
 	public void setANCOUNT(int count) {
 		ANCOUNT = count;
+		
+		String bin = String.format("%16s", Integer.toBinaryString(
+				count)).replace(' ', '0');
+		
+		data[6] = (byte) Integer.parseInt(bin.substring(0, 8), 2);
+		data[7] = (byte) Integer.parseInt(bin.substring(8, 16), 2);
 	}
 	
 	public byte[] getIdArr() {
