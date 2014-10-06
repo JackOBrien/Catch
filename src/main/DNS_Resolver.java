@@ -11,6 +11,7 @@ import java.util.Random;
 import java.util.regex.*;
 
 import cache.Cache;
+import packet.DNS_Answer;
 import packet.DNS_Header;
 import packet.DNS_Packet;
 import packet.DNS_Question;
@@ -54,10 +55,12 @@ public class DNS_Resolver {
 	private int initialPort;
 	
 	private DNS_Packet initialPacket;
-	
-	private DNS_Packet initialPacket2;
-	
+		
 	private String initialName;
+	
+	private boolean resolvingCNAME;
+	
+	private ArrayList<DNS_Answer> cnameAnswers;
 	
 	private Cache cache;
 		
@@ -283,7 +286,7 @@ public class DNS_Resolver {
 		 * retrieves in answer or an error. Then, the while loops will
 		 * start listing for more queries. */
 		while (true) {
-			
+						
 			/* Starts listening for data sent to the server.
 			 * Restarts the loops and prints error message if
 			 * there is an error receiving the packet. */
@@ -301,10 +304,9 @@ public class DNS_Resolver {
 			initialIP = recvPacket.getAddress();
 			initialPort = recvPacket.getPort();
 			
-			DNS_Packet dnsPacket = new DNS_Packet(
-					recvPacket.getData(), recvPacket.getLength());
+			resolvingCNAME = false;
 			
-			initialPacket2 = new DNS_Packet(
+			DNS_Packet dnsPacket = new DNS_Packet(
 					recvPacket.getData(), recvPacket.getLength());
 			
 			DNS_Header header = dnsPacket.getHeader();
@@ -396,10 +398,20 @@ public class DNS_Resolver {
 			
 			String cname = dnsPacket.getCNAME();
 			if (!cname.isEmpty()) {
-				initialPacket2.getHeader().setID(dnsPacket.getBytes());
-				initialPacket2.setQuestionName(cname);
-				initialPacket2.getHeader().setRecursionDesired(false);
-				recursiveQuery(initialPacket2);
+				resolvingCNAME = true;
+				initialPacket.setQuestionName(cname);
+				recursiveQuery(initialPacket);
+				
+				for (DNS_Answer answ : cnameAnswers) {
+					dnsPacket.addAnswer(answ);
+				}
+								
+				sendAnswers(dnsPacket);
+				return;
+			}
+			
+			if (resolvingCNAME) {
+				cnameAnswers = dnsPacket.getAnswers();
 				return;
 			}
 			

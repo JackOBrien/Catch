@@ -44,6 +44,8 @@ public class DNS_Answer {
 	 * set to a blank string. */
 	private String RDATA;
 	
+	private int length;
+	
 	/** The value for A type, which is IPv4 */
 	public static final int A_TYPE = 1;
 	
@@ -95,6 +97,8 @@ public class DNS_Answer {
 		endIndex += 2;
 		
 		endIndex += RDLENGTH;
+		
+		length = endIndex - sIndex;
 	}
 	
 	/****************************************************************
@@ -268,6 +272,10 @@ public class DNS_Answer {
 	
 	public int getTTL() {
 		return TTL;
+	}
+	
+	public int getLength() {
+		return length;
 	}
 	
 	public String getName() {

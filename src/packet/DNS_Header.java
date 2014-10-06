@@ -274,6 +274,10 @@ public class DNS_Header {
 		data [1] = bytes[1];
 	}
 	
+	public void setANCOUNT(int count) {
+		ANCOUNT = count;
+	}
+	
 	public byte[] getIdArr() {
 		return idArr;
 	}

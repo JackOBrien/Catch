@@ -4,6 +4,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
+import com.sun.org.apache.xpath.internal.operations.And;
+
 /********************************************************************
  * DNS Packet
  * Project 3 - CIS 457-10
@@ -158,6 +160,12 @@ public class DNS_Packet {
 		}
 		
 		return answers;
+	}
+	
+	public void addAnswer(DNS_Answer answ) {
+		responses.add(0, answ);
+		header.setANCOUNT(header.getANCOUNT() + 1);
+		dataLength += answ.getLength();
 	}
 	
 	public ArrayList<DNS_Answer> getAnswers(int type) {
