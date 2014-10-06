@@ -125,6 +125,17 @@ public class DNS_Packet {
 		return ipArr;
 	}
 	
+	public ArrayList<DNS_Answer> getAnswers() {
+		int numAnswer = header.getANCOUNT();
+		ArrayList<DNS_Answer> answers = new ArrayList<DNS_Answer>();
+		
+		for (int i = 0; i < numAnswer; i++) {
+			answers.add(responses.get(i));
+		}
+		
+		return answers;
+	}
+	
 	public ArrayList<DNS_Answer> getAnswers(int type) {
 		
 		if (type != DNS_Answer.A_TYPE && type != DNS_Answer.NS_TYPE)

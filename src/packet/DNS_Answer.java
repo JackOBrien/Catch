@@ -1,6 +1,7 @@
 package packet;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 /********************************************************************
  * DNS Question
@@ -73,21 +74,21 @@ public class DNS_Answer {
 		findNameLength();
 		
 		name = readNameField(sIndex);
-		
-		TYPE = hexBytesToDecimal(
+				
+		TYPE = bytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
 		
-		CLASS = hexBytesToDecimal(
+		CLASS = bytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
 		
-		TTL = hexBytesToDecimal(
+		TTL = bytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1], 
-							data[endIndex + 2], data[endIndex + 2]});
+							data[endIndex + 2], data[endIndex + 3]});
 		endIndex +=4;
 		
-		RDLENGTH = hexBytesToDecimal(
+		RDLENGTH = bytesToDecimal(
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
 		
@@ -226,14 +227,17 @@ public class DNS_Answer {
 	 * @param hex array of bytes to be treated as a single hex number.
 	 * @return the decimal representation of the given hex number.
 	 ***************************************************************/
-	private int hexBytesToDecimal(byte[] hex) {
+	private int bytesToDecimal(byte[] hex) {
 		String str = "";
-				
+		String buff = "00000000";		
+		
 		for (byte b : hex) {
-			str += Integer.toHexString(b & 0xFF);
+			String current = Integer.toBinaryString(b & 0xFF);
+			str += (buff + current).substring(current.length());
+			
 		}
 		
-		return Integer.parseInt(str, 16);
+		return Integer.parseInt(str, 2);
 	}
 	
 	/****************************************************************

@@ -39,7 +39,8 @@ public class Cache {
 			
 			if (nsName.isEmpty()) continue;
 			
-			int TTD = (int) (time + a.getTTL());
+			int TTL = a.getTTL();
+			long TTD = (time + TTL);
 			InetAddress IP = null;
 			
 			try {
@@ -48,7 +49,7 @@ public class Cache {
 				continue;
 			}
 						
-			cache.add(new Cache_Entry(TTD, IP, nsName));
+			cache.add(new Cache_Entry(TTL, TTD, IP, nsName));
 		}
 	}
 	
@@ -56,32 +57,34 @@ public class Cache {
 		ArrayList<DNS_Answer> responses = packet.getResponses();
 		int numAnswers = packet.getHeader().getANCOUNT();
 		
+		long TTD = Long.MAX_VALUE;
+		int TTL = 0;
+		
 		for (int i = 0; i < numAnswers; i++) {
 			DNS_Answer answ = responses.get(i);
 			
-			int TTD = (int) (time + answ.getTTL());
-
-			InetAddress IP = null;
-
-			try {
-				IP = InetAddress.getByName(answ.getRDATA());
-			} catch (UnknownHostException e) {
-				continue;
+			TTL = answ.getTTL();
+			long currentTTD = (time + TTL);	
+			
+			if (currentTTD < TTD) {
+				TTD = currentTTD;
 			}
-			
-			String name = answ.getName();
-			
-			answers.add(new Cache_Entry(TTD, IP, name, packet));
-		}
+		} 
 		
+		String name = responses.get(0).getName();
+		
+		answers.add(new Cache_Entry(TTL, TTD, name, packet));
 	}
 	
-	public ArrayList<InetAddress> findName(String name) {
+	public ArrayList<InetAddress> findName(String name, long time) {
 		
 		ArrayList<InetAddress> ipArr = new ArrayList<InetAddress>();
+
+		checkForExpired(time);
 		
 		for (Cache_Entry entry : cache) {
 			if (entry.getName().equals(name)) {
+				
 				ipArr.add(entry.getIP());
 			}
 		}
@@ -94,31 +97,78 @@ public class Cache {
 			}
 			
 			int length = strArr[0].length() + 1;
-			return findName(name.substring(length));
+			return findName(name.substring(length), time);
 		}
-		
+				
 		return ipArr;
 	}
 	
-	public DNS_Packet findAnswer(String name) {
+	public DNS_Packet findAnswer(String name, long time) {
 		
 		DNS_Packet packet = null;
 		
+		checkForExpired(time);
+		
 		for (Cache_Entry entry : answers) {
 			if (entry.getName().equals(name)) {
+				
 				packet = entry.getPacket();
 				break;
 			}
 		}
-		
+				
 		return packet;
+	}
+	
+	private void checkForExpired(long time) {
+		ArrayList<Cache_Entry> toRemove = new ArrayList<Cache_Entry>();
+		
+		for (Cache_Entry entry : cache) {
+			if (entry.getTTD() <= time) {
+				toRemove.add(entry);
+			}
+		}
+		
+		cache.removeAll(toRemove);
+		
+		for (Cache_Entry entry : answers) {
+			if (entry.getTTD() <= time) {
+				toRemove.add(entry);
+			}
+		}
+		
+		answers.removeAll(toRemove);
 	}
 		
 	public String toString() {
-//		for (Cache_Entry entry : cache) {
-//			
-//		}
+		String str = "\n--Cache Entries--";
+		str += String.format("\n #  |%10s  %18s  %15s", "TTL", "Name", "IPv4");
+		int count = 1;
 		
-		return "";
+		checkForExpired(System.currentTimeMillis() / 1000);
+		
+		if (!cache.isEmpty()) {
+			str += "\n" + new String(new char[52]).replace("\0", "-");
+			for (Cache_Entry entry : cache) {
+				str += String.format("\n%03d |", count);
+				str += entry.toString();
+
+				count++;
+			}
+		} 
+		
+		if (!answers.isEmpty()){
+			str += "\n" + new String(new char[52]).replace("\0", "-");
+			str += String.format("\n%30s", "Answers");
+			str += String.format("\n%15s  %18s  %15s", "TTL", "Name", "IPv4");
+			str += "\n" + new String(new char[52]).replace("\0", "-");
+			for (Cache_Entry entry : answers) {
+				str += entry.toString();
+			}
+
+		} else if (cache.isEmpty()) {
+			str = "-No entries in the cache-";
+		}
+		return str;
 	}
 }

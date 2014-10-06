@@ -266,6 +266,10 @@ public class DNS_Resolver {
 		return recvPacket;
 	}
 	
+	public String printCache() {
+		return cache.toString();
+	}
+	
 	private boolean checkError(int rcode, String name) {
 		if (rcode != DNS_Header.NO_ERROR) {
 			
@@ -295,7 +299,8 @@ public class DNS_Resolver {
 		}
 		
 		/* Add to cache */
-		cache.addAnswer(dnsPacket, startTime);
+		long currentTime = System.currentTimeMillis() / 1000;
+		cache.addAnswer(dnsPacket, currentTime);
 		
 		sendMessage(dnsPacket, initialIP, initialPort);
 	}
@@ -382,7 +387,8 @@ public class DNS_Resolver {
 	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
 		
 		/* Check for answers */
-		DNS_Packet answPacket = cache.findAnswer(initialName);
+		long currentTime = System.currentTimeMillis() / 1000;
+		DNS_Packet answPacket = cache.findAnswer(initialName, currentTime);
 		if (answPacket != null) {
 			
 			// Initial packet ID
@@ -398,7 +404,8 @@ public class DNS_Resolver {
 		}
 		
 		/* Check cache */
-		ArrayList<InetAddress> cachedIps = cache.findName(initialName);
+		ArrayList<InetAddress> cachedIps = 
+				cache.findName(initialName, currentTime);
 		
 		if (!cachedIps.isEmpty()) {
 			String ip = cachedIps.get(0).getHostAddress();
@@ -452,7 +459,8 @@ public class DNS_Resolver {
 			System.out.println();			
 			
 			/* Add to cache */
-			cache.addPacket(dnsPacket, startTime);
+			long currentTime = System.currentTimeMillis() / 1000;
+			cache.addPacket(dnsPacket, currentTime);
 			
 			recursiveQuery(dnsPacket, 0, dnsPacket.getResponseIPs());
 		}

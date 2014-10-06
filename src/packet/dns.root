@@ -14,6 +14,9 @@
 ;
 ; formerly NS.INTERNIC.NET
 ;
+8;;.8.8.8
+199.7.91.13
+
 .                        3600000  IN  NS    A.ROOT-SERVERS.NET.
 A.ROOT-SERVERS.NET.      3600000      A     198.41.0.4
 A.ROOT-SERVERS.NET.      3600000      AAAA  2001:503:BA3E::2:30
