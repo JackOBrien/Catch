@@ -1,6 +1,7 @@
 package main;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -54,6 +55,8 @@ public class Catch_GUI {
 		frame.setLayout(new BorderLayout());
 		
 		textArea = new JTextArea(30, 70);
+		textArea.setBackground(new Color(9, 10, 10));
+		textArea.setForeground(new Color(142, 230, 242));
 		textArea.setFont(new Font("monospaced", Font.PLAIN, 12));
 		textArea.setEditable(false);
 		JScrollPane sp = new JScrollPane(textArea);

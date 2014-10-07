@@ -447,6 +447,8 @@ public class DNS_Resolver {
 			/* Checks if the answer contains a CNAME indicating it
 			 * needs to be resolved further. */
 			if (!cname.isEmpty()) {
+				System.out.println("-Resolving CNAME: " + cname + "-\n");
+				
 				resolvingCNAME = true;
 				initialPacket.setQuestionName(cname);
 				recursiveQuery(initialPacket);
