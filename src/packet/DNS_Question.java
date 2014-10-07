@@ -3,8 +3,6 @@ package packet;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
 /********************************************************************
  * DNS Question
  * Project 3 - CIS 457-10
@@ -14,7 +12,7 @@ import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
  * @author Megan Maher
  * @author Tyler McCarthy
  * 
- * @version Sep 29, 2014
+ * @version Oct 6, 2014
  *******************************************************************/
 public class DNS_Question {
 		
@@ -24,10 +22,13 @@ public class DNS_Question {
 	/** The index marking the end of this section of the packet. */
 	private int endIndex;
 	
+	/** The length of the name of this question. */
 	private int nameLength;
 	
+	/** The type of this question */
 	private int QTYPE;
 	
+	/** The class of this question. */
 	private int QCLASS;
 	
 	/** The name of the host the question is asking about.*/
@@ -116,6 +117,12 @@ public class DNS_Question {
 		nameLength = endIndex - sIndex;
 	}
 	
+	/****************************************************************
+	 * Removes the current name from this question and replaces it
+	 * with the name given by the parameter as a String.
+	 * 
+	 * @param URL String representation of the name to be set.
+	 ***************************************************************/
 	protected void setName (String URL) {
 		ArrayList<Byte> byteList = new ArrayList<Byte>();
 		
@@ -187,6 +194,9 @@ public class DNS_Question {
 		return Integer.parseInt(str, 16);
 	}
 	
+	/****************************************************************
+	 * @return the byte array representing the entire packet as bytes.
+	 ***************************************************************/
 	public byte[] getData() {
 		return data;
 	}

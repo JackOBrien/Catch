@@ -4,20 +4,35 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
 import packet.DNS_Answer;
 import packet.DNS_Packet;
 
+/********************************************************************
+ * Cache.java
+ *
+ * @author Jack O'Brien
+ * @author Megan Maher
+ * @author Tyler McCarthy
+ * @version Oct 7, 2014
+ *******************************************************************/
 public class Cache {
 	private ArrayList<Cache_Entry> cache;
 	private ArrayList<Cache_Entry> answers;
 	
+	/****************************************************************
+	 * Constructor for Cache
+	 ***************************************************************/
 	public Cache() {
 		cache = new ArrayList<Cache_Entry>();
 		answers = new ArrayList<Cache_Entry>();
 	}
 	
+	/****************************************************************
+	 * Adds a packet to the cache.
+	 * 
+	 * @param packet packet to add to the cache.
+	 * @param time time in seconds of when the packet was added.
+	 ***************************************************************/
 	public void addPacket(DNS_Packet packet, long time) {
 		ArrayList<DNS_Answer> aTypes = packet.getAnswers(DNS_Answer.A_TYPE);
 		ArrayList<DNS_Answer> nsTypes = packet.getAnswers(DNS_Answer.NS_TYPE);
@@ -53,6 +68,12 @@ public class Cache {
 		}
 	}
 	
+	/****************************************************************
+	 * Adds a packet to the cache as an answer.
+	 * 
+	 * @param packet packet to add to the answers cache.
+	 * @param time time in seconds of when the packet was added.
+	 ***************************************************************/
 	public void addAnswer(DNS_Packet packet, long time) {
 		ArrayList<DNS_Answer> responses = packet.getResponses();
 		int numAnswers = packet.getHeader().getANCOUNT();
@@ -76,6 +97,15 @@ public class Cache {
 		answers.add(new Cache_Entry(TTL, TTD, name, packet));
 	}
 	
+	/****************************************************************
+	 * Returns a list of IP addressed found in the cache to be 
+	 * associated with the given name
+	 * 
+	 * @param name domain name to be searched in the cache
+	 * @param time current time in seconds.
+	 * @return list of IP addressed found in the cache to be 
+	 * associated with the given name.
+	 ***************************************************************/
 	public ArrayList<InetAddress> findName(String name, long time) {
 		
 		ArrayList<InetAddress> ipArr = new ArrayList<InetAddress>();
@@ -103,6 +133,15 @@ public class Cache {
 		return ipArr;
 	}
 	
+	/****************************************************************
+	 * Returns a list of IP addressed found in the answer cache to be 
+	 * associated with the given name
+	 * 
+	 * @param name domain name to be searched in the cache
+	 * @param time current time in seconds.
+	 * @return list of IP addressed found in the answer cache to be 
+	 * associated with the given name.
+	 ***************************************************************/
 	public DNS_Packet findAnswer(String name, long time) {
 		
 		DNS_Packet packet = null;
@@ -120,6 +159,12 @@ public class Cache {
 		return packet;
 	}
 	
+	/****************************************************************
+	 * Checks for entries in the cache that are past their time to
+	 * die.
+	 * 
+	 * @param time current time in seconds.
+	 ***************************************************************/
 	private void checkForExpired(long time) {
 		ArrayList<Cache_Entry> toRemove = new ArrayList<Cache_Entry>();
 		
@@ -158,10 +203,10 @@ public class Cache {
 		} 
 		
 		if (!answers.isEmpty()){
-			str += "\n" + new String(new char[52]).replace("\0", "-");
-			str += String.format("\n%30s", "Answers");
-			str += String.format("\n%15s  %18s  %15s", "TTL", "Name", "RDATA");
-			str += "\n" + new String(new char[52]).replace("\0", "-");
+			str += "\n" + new String(new char[64]).replace("\0", "-");
+			str += String.format("\n%35s", "Answers");
+			str += String.format("\n%15s  %22s  %23s", "TTL", "Name", "RDATA");
+			str += "\n" + new String(new char[64]).replace("\0", "-");
 			for (Cache_Entry entry : answers) {
 				str += entry.toString();
 			}

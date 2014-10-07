@@ -3,9 +3,6 @@ package packet;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
-
-import com.sun.org.apache.xpath.internal.operations.And;
 
 /********************************************************************
  * DNS Packet
@@ -18,26 +15,31 @@ import com.sun.org.apache.xpath.internal.operations.And;
  * @author Tyler McCarthy
  * @author Jack O'Brien
  * 
- * @version Sep 28, 2014
+ * @version Oct 7, 2014
  *******************************************************************/
 public class DNS_Packet {
 
+	/** This packet's header */
 	private DNS_Header header;
 	
+	/** List of all of this packet's questions */
 	private ArrayList<DNS_Question> questions;
 	
+	/** List of all this packet's responses. */
 	private ArrayList<DNS_Answer> responses;
-	
-	private int offset;
-	
+		
+	/** The index of the last index used by the last answer that
+	 * was created by this packet's constructor. */
 	private int lastNativeAnsw;
 	
+	/** Byte array containing the byte representation of this packet. */
 	private byte[] data;
 	
+	/** The length of this packet. */
 	private int dataLength;
 	
 	/****************************************************************
-	 * Constructor for DNS_Packet.
+	 * Default constructor for DNS_Packet.
 	 * 
 	 * @param data bytes which make up the packet.
 	 ***************************************************************/
@@ -47,18 +49,26 @@ public class DNS_Packet {
 		header = new DNS_Header(d);
 		createQuestions();
 		createResponses();
-		offset = 0;
 	}
 	
+	/****************************************************************
+	 * Constructor for DNS_Packet that takes a byte array and the length
+	 * of the bytes used in the array.
+	 * 
+	 * @param d bytes which make up the packet.
+	 * @param length number of bytes used in the given byte array.
+	 ***************************************************************/
 	public DNS_Packet(byte[] d, int length) {
 		data = d;
 		dataLength = length;
 		header = new DNS_Header(d);
 		createQuestions();
 		createResponses();		
-		offset = 0;
 	}
 	
+	/****************************************************************
+	 * Generates DNS_Answer objects from the byte array.
+	 ***************************************************************/
 	private void createResponses() {
 		responses = new ArrayList<DNS_Answer>();
 		int numResponses = header.getANCOUNT() + header.getNSCOUNT() + 
@@ -105,6 +115,10 @@ public class DNS_Packet {
 		}
 	}
 	
+	/****************************************************************
+	 * @return the String representation of the first CNAME type found
+	 * in this packet's responses. If none, a blank string is returned.
+	 ***************************************************************/
 	public String getCNAME() {
 		
 		for (DNS_Answer a : responses) {
@@ -116,6 +130,11 @@ public class DNS_Packet {
 		return "";
 	}
 	
+	/****************************************************************
+	 * Sets the name field of the first question of this packet.
+	 * 
+	 * @param name name to be set for this packet's question.
+	 ***************************************************************/
 	public void setQuestionName(String name) {
 		int size = data.length;
 		DNS_Question q = questions.get(0);
@@ -125,6 +144,12 @@ public class DNS_Packet {
 		dataLength += size;
 	}
 	
+	/****************************************************************
+	 * Sets this packet's ID from an array of bytes
+	 * 
+	 * @param bytes byte array where the first two bytes contain the
+	 * ID to be set.
+	 ***************************************************************/
 	public void setID(byte[] bytes) {		
 		
 		if (bytes.length != 2) {
@@ -142,6 +167,9 @@ public class DNS_Packet {
 		return header;
 	}
 	
+	/****************************************************************
+	 * @return list of responses in this packet.
+	 ***************************************************************/
 	public ArrayList<DNS_Answer> getResponses() {
 		return responses;
 	}
@@ -160,6 +188,9 @@ public class DNS_Packet {
 		return names;
 	}
 	
+	/****************************************************************
+	 * @return list of IPs found in the responses of this packet.
+	 ***************************************************************/
 	public ArrayList<InetAddress> getResponseIPs() {
 		ArrayList<InetAddress> ipArr = new ArrayList<InetAddress>();
 		
@@ -176,6 +207,9 @@ public class DNS_Packet {
 		return ipArr;
 	}
 	
+	/****************************************************************
+	 * @return list of answers found in this packet.
+	 ***************************************************************/
 	public ArrayList<DNS_Answer> getAnswers() {
 		int numAnswer = header.getANCOUNT();
 		ArrayList<DNS_Answer> answers = new ArrayList<DNS_Answer>();
@@ -187,6 +221,12 @@ public class DNS_Packet {
 		return answers;
 	}
 	
+	/****************************************************************
+	 * Adds the given DNS_Answer to this packet. The answer is added
+	 * after the last answer type in the packet.
+	 * 
+	 * @param answ answer object to be inserted to this packet.
+	 ***************************************************************/
 	public void addAnswer(DNS_Answer answ) {	
 		ArrayList<Byte> byteList = new ArrayList<Byte>();
 		
@@ -222,15 +262,11 @@ public class DNS_Packet {
 		answ.setEndIndex(start + length);
 		
 		responses.add(header.getANCOUNT(), answ);
-		
-		System.out.println("4" + Arrays.toString(data));
-		
+				
 		for (DNS_Answer a : responses) {
 			data = a.accountForOffest(length, lastNativeAnsw, data);
 		}
-		
-		System.out.println("F" + Arrays.toString(data));
-		
+				
 		/* Change the number of answers. */
 		String bin = String.format("%16s", Integer.toBinaryString(
 				(header.getANCOUNT() + 1) & 0xFF)).replace(' ', '0');
@@ -242,6 +278,13 @@ public class DNS_Packet {
 		dataLength += answ.getLength();
 	}
 	
+	/****************************************************************
+	 * Returns the answers found in this packet of a given type.
+	 * Only supported for A and NS types.
+	 * 
+	 * @param type type of answers to return
+	 * @return all answers of the specified type.
+	 ***************************************************************/
 	public ArrayList<DNS_Answer> getAnswers(int type) {
 		
 		if (type != DNS_Answer.A_TYPE && type != DNS_Answer.NS_TYPE)
@@ -258,6 +301,9 @@ public class DNS_Packet {
 		return answers;
 	}
 	
+	/****************************************************************
+	 * @return string array of the final answers found in this packet.
+	 ***************************************************************/
 	public String[] getFinalAnswers() {
 		int numAnswers = header.getANCOUNT();
 		if (numAnswers == 0) return null;
@@ -278,10 +324,18 @@ public class DNS_Packet {
 		return data;
 	}
 	
+	/****************************************************************
+	 * @return the number of bytes used in this packets byte array.
+	 ***************************************************************/
 	public int getLength() {
 		return dataLength;
 	}
 	
+	/****************************************************************
+	 * Sets the length of this packet to the specified number.
+	 * 
+	 * @param length length to be set.
+	 ***************************************************************/
 	public void setLength(int length) {
 		dataLength = length;
 	}

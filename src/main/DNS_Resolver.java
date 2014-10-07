@@ -6,15 +6,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
 import java.util.regex.*;
 
 import cache.Cache;
 import packet.DNS_Answer;
 import packet.DNS_Header;
 import packet.DNS_Packet;
-import packet.DNS_Question;
 
 
 /********************************************************************
@@ -25,43 +22,51 @@ import packet.DNS_Question;
  * @author Megan Maher
  * @author Tyler McCarthy
  * 
- * @version Oct 4, 2014
+ * @version Oct 7, 2014
  *******************************************************************/
 public class DNS_Resolver {
-	
-	/** Default root DNS to use in case there is an error reading
-	 * the file containing the list of root DNS. */
-	private final InetAddress DEFAULT_ROOT_DNS = 
-			InetAddress.getByName("199.7.91.13");
 	
 	/** The port to query a DNS is  */
 	final int DNS_PORT = 53;
 	
+	/** Path to the root hints file. */
 	private final String PATH = "src/packet/dns.root";
 	
+	/** Time out in seconds */
 	private final int TIMEOUT = 3500;
 	
 	/** The port used to host this server */
 	private int SERVER_PORT;
 	
+	/** The address of this resolver. */
 	private InetAddress SERVER_IP;
 	
+	/** Te socket of this server. */
 	private DatagramSocket serverSocket;
 		
+	/** List of all the root IPs */
 	private ArrayList<InetAddress> rootIPs;
 	
+	/** The IP of the person who sent the original query. */
 	private InetAddress initialIP;
 	
+	/** The port of the person who sent the original query. */
 	private int initialPort;
 	
+	/** The packet created from the initial query. */
 	private DNS_Packet initialPacket;
 		
+	/** The name of the initial query. */
 	private String initialName;
 	
+	/** Tells if the recursive query method is in the process of
+	 * resolving a CNAME */
 	private boolean resolvingCNAME;
 	
+	/** The list of answers resolved for the CNAME */
 	private ArrayList<DNS_Answer> cnameAnswers;
 	
+	/** This resolver's cache. */
 	private Cache cache;
 		
 	/****************************************************************
@@ -202,6 +207,17 @@ public class DNS_Resolver {
 		return recvPacket;
 	}
 	
+	/****************************************************************
+	 * Receive method that handles retries and only accepts packets
+	 * from the given IP address.
+	 * 
+	 * @param attempts number of attempts to make if failed.
+	 * @param addr IPv4 of the expected sender.
+	 * @param packet packet to send.
+	 * @param port port to send on.
+	 * @return the UDP packet that was received
+	 * @throws IOException if there was a problem with receiving.
+	 ***************************************************************/
 	private DatagramPacket receiveMessage(int attempts, InetAddress addr, 
 			DNS_Packet packet, int port) throws IOException {
 
@@ -210,7 +226,7 @@ public class DNS_Resolver {
 		for (int i = 0; i < attempts; i++) {
 
 			if (i > 0) {
-				String message = "Retring receive from: ";
+				String message = "Retrying receive from: ";
 				System.err.println(message + addr.getHostAddress());
 				sendMessage(packet, addr, port);
 			}
@@ -237,10 +253,20 @@ public class DNS_Resolver {
 		return recvPacket;
 	}
 	
+	/****************************************************************
+	 * @return a string representation of the resolver's cache.
+	 ***************************************************************/
 	public String printCache() {
 		return cache.toString();
 	}
 	
+	/****************************************************************
+	 * Checks if the packet has an error flag marked.
+	 * 
+	 * @param rcode the error code.
+	 * @param name name of the domain being resolved.
+	 * @return true if there is an error.
+	 ***************************************************************/
 	private boolean checkError(int rcode, String name) {
 		if (rcode != DNS_Header.NO_ERROR) {
 			
@@ -257,6 +283,13 @@ public class DNS_Resolver {
 		return false;
 	}
 	
+	/****************************************************************
+	 * Sends the given packet containing the final answers to the 
+	 * address which the initial query was received from.
+	 * 
+	 * @param dnsPacket packet containing the answers to send.
+	 * @throws IOException if there was an error sending the packet.
+	 ***************************************************************/
 	private void sendAnswers(DNS_Packet dnsPacket) throws IOException {
 		System.out.println("--Answers--");
 		for (String addr : dnsPacket.getFinalAnswers()) {
@@ -276,9 +309,6 @@ public class DNS_Resolver {
 		dnsPacket.setID(initialPacket.getBytes());
 		
 		sendMessage(dnsPacket, initialIP, initialPort);
-		
-		//TODO REMOVE THIS
-		sendMessage(dnsPacket, DEFAULT_ROOT_DNS, DNS_PORT);
 	}
 	
 	/****************************************************************
@@ -347,12 +377,9 @@ public class DNS_Resolver {
 			try {
 				recursiveQuery(dnsPacket);
 			} catch (IndexOutOfBoundsException iob) {
-				// TODO :  remove stack trace
-//				iob.printStackTrace();
 				String message = "No response from server";
 				System.err.println(message);
 			} catch (Exception e) {
-				e.printStackTrace();
 				String message = "Error when attempting to contact " + 
 						"DNS server";
 				System.err.println(message);
@@ -361,6 +388,14 @@ public class DNS_Resolver {
 		}
 	}
 	
+	/****************************************************************
+	 * Checks cache for the given packet, then queries the cached IP
+	 * or root DNS.
+	 * 
+	 * @param dnsPacket packet containing query
+	 * @throws Exception if no servers could be reached or if there
+	 * is any type of sending or receiving error.
+	 ***************************************************************/
 	private void recursiveQuery(DNS_Packet dnsPacket) throws Exception {
 		
 		/* Check for answers */
@@ -389,13 +424,28 @@ public class DNS_Resolver {
 		recursiveQuery(dnsPacket, 0, rootIPs);	
 	}
 	
+	/****************************************************************
+	 * Recursively sends query to the IPs given in the array, moving 
+	 * to the next index when the former fails.
+	 * 
+	 * @param dnsPacket packet containing query.
+	 * @param index current index in IP array to try.
+	 * @param ipArr array list of IPs for the next hop.
+	 * @throws Exception if no servers could be reached or if there
+	 * is any type of sending or receiving error.
+	 ***************************************************************/
 	private void recursiveQuery(DNS_Packet dnsPacket, int index,
 			ArrayList<InetAddress> ipArr) throws Exception {
+		
 		DNS_Header header = dnsPacket.getHeader();
 		
+		/* If there is an answer in the packet. */
 		if (header.getANCOUNT() > 0) {
 			
 			String cname = dnsPacket.getCNAME();
+			
+			/* Checks if the answer contains a CNAME indicating it
+			 * needs to be resolved further. */
 			if (!cname.isEmpty()) {
 				resolvingCNAME = true;
 				initialPacket.setQuestionName(cname);
@@ -409,6 +459,7 @@ public class DNS_Resolver {
 				return;
 			}
 			
+			/* Checks if this is the last stop in resolving a CNAME */
 			if (resolvingCNAME) {
 				cnameAnswers = dnsPacket.getAnswers();
 				return;
@@ -416,8 +467,16 @@ public class DNS_Resolver {
 			
 			sendAnswers(dnsPacket);
 			
+		/* If there is no answer in the packet. */
 		} else {	
 			
+			/* Checks for an error code. */
+			if (checkError(header.getRCODE(), initialName)) {
+				sendMessage(dnsPacket, initialIP, initialPort);
+				return;
+			}
+			
+			/* Checks for an empty list of IPs. */
 			if (ipArr.isEmpty()) {
 				String message = "No A type responses given";
 				System.err.println(message);

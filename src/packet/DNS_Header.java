@@ -1,7 +1,5 @@
 package packet;
 
-import java.util.Arrays;
-
 /********************************************************************
  * DNS Header
  * Project 3 - CIS 457-10
@@ -13,7 +11,7 @@ import java.util.Arrays;
  * @author Megan Maher
  * @author Jack O'Brien
  * 
- * @version Sep 29, 2014
+ * @version Oct 7, 2014
  *******************************************************************/
 public class DNS_Header {
 
@@ -163,20 +161,7 @@ public class DNS_Header {
 	 ***************************************************************/
 	public String getID() {
 		return ID;
-	}
-	
-	/****************************************************************
-	 * Returns the value of the flags and codes stored in the second
-	 * two bytes of the DNS header. 
-	 * 
-	 * @return array containing the value of the second two bytes 
-	 * of the DNS header in the following order: 
-	 *   {QR, OPCODE, AA, TC, RD, RA, RCODE}
-	 ***************************************************************/
-	public int[] getFlags() {
-		return new int[] {QR, OPCODE, AA, TC, RD, RA, RCODE};
-	}
-	
+	}	
 	
 	/****************************************************************
 	 * @return the response code for this packet header.
@@ -204,6 +189,11 @@ public class DNS_Header {
 		return ANCOUNT;
 	}
 	
+	/****************************************************************
+	 * Sets the number of answers.
+	 * 
+	 * @param count number of answers in this packet.
+	 ***************************************************************/
 	public void setANCOUNT(int count) {
 		ANCOUNT = count;
 	}
@@ -252,6 +242,12 @@ public class DNS_Header {
 		data[2] = flag1;
 	}
 	
+	/****************************************************************
+	 * Sets the Query/Response flag according to the parameter. 
+	 * Set to 1 if true, 0 if false. 
+	 * 
+	 * @param response true if the QR flag is to be set to 1
+	 ***************************************************************/
 	public void setQR(boolean response) {
 		byte flag1 = data[2];
 		String bin = String.format("%8s", Integer.toBinaryString(
@@ -269,6 +265,9 @@ public class DNS_Header {
 		data[2] = flag1;
 	}
 	
+	/****************************************************************
+	 * @return the id of this packet represented as bytes.
+	 ***************************************************************/
 	public byte[] getIdArr() {
 		return idArr;
 	}

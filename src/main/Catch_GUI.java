@@ -11,11 +11,22 @@ import java.io.PrintStream;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+/********************************************************************
+ * Catch_GUI.java
+ *
+ * Output is written to a scroll pane with the option to print the
+ * resolver's cache to the screen.
+ *
+ * @author Jack O'Brien
+ * @author Megan Maher
+ * @author Tyler McCarthy
+ * 
+ * @version Oct 7, 2014
+ *******************************************************************/
 public class Catch_GUI {
 
 	private JFrame frame;
@@ -27,6 +38,7 @@ public class Catch_GUI {
 	public Catch_GUI() {
 		String message = "Port Number?";
 		int port = -1;
+		
 		do {
 			String response = JOptionPane.showInputDialog(message);
 			
@@ -59,7 +71,13 @@ public class Catch_GUI {
 		try {
 			resolver = new DNS_Resolver(port);
 		} catch (Exception e) {
+			if (e.getMessage().startsWith("Problem hosting server on port")) {
+				JOptionPane.showMessageDialog(frame, e.getMessage());
+				System.exit(1);
+			}
+			
 			System.out.println(e.getMessage());
+			
 		}
 		
 		resolver.begin();
