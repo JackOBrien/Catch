@@ -46,6 +46,12 @@ public class DNS_Answer {
 	
 	private int length;
 	
+	private int off;
+	
+	private int from;
+	
+	private byte[] updated;
+	
 	/** The value for A type, which is IPv4 */
 	public static final int A_TYPE = 1;
 	
@@ -67,6 +73,11 @@ public class DNS_Answer {
 		data = d;
 		sIndex = start;
 		endIndex = start;
+		
+		from = Integer.MAX_VALUE;
+		off = 0;
+		updated = data;
+		
 		interpretData();
 	}
 
@@ -96,6 +107,7 @@ public class DNS_Answer {
 				new byte[] {data[endIndex], data[endIndex + 1]});
 		endIndex += 2;
 		
+		RDATA = interpretRDATA();
 		endIndex += RDLENGTH;
 		
 		length = endIndex - sIndex;
@@ -111,7 +123,7 @@ public class DNS_Answer {
 	private String interpretRDATA() {
 		
 		String rdata = "";
-		int rdataIndex = endIndex - RDLENGTH;
+		int rdataIndex = endIndex;
 		
 		
 		/* Checks for A type */
@@ -186,7 +198,6 @@ public class DNS_Answer {
 			return "";
 		} else {
 
-
 			// Converts current byte into binary to check for pointer
 			String bin = String.format("%8s", Integer.toBinaryString(
 					labelLen)).replace(' ', '0');
@@ -202,7 +213,14 @@ public class DNS_Answer {
 						data[index + 1] & 0xFF)).replace(' ', '0');
 
 				int offset = Integer.parseInt(binaryPtr, 2);
-
+				
+				if (offset >= from ) {
+					updated[index + off] = (byte) Integer.parseInt(
+							("11" + binaryPtr.substring(0, 6)), 2);
+					updated[index + off + 1] = (byte) (Integer.parseInt(
+							binaryPtr.substring(6, 14), 2) + off);
+				}
+				
 				String gotFromPointer = readNameField(offset, name);
 
 				return gotFromPointer ;
@@ -242,8 +260,20 @@ public class DNS_Answer {
 			str += (buff + current).substring(current.length());
 			
 		}
-		
+
 		return Integer.parseInt(str, 2);
+	}
+	
+	public void setEndIndex(int index) {
+		endIndex = index;
+	}
+	
+	public byte[] accountForOffest(int offset, int from, byte[] d) {
+		updated = d;
+		off = offset;
+		this.from = from;
+		readNameField(sIndex);
+		return updated;
 	}
 	
 	/****************************************************************
@@ -253,7 +283,7 @@ public class DNS_Answer {
 	 * @return the String representation of the RDATA field.
 	 ***************************************************************/
 	public String getRDATA() {
-		return interpretRDATA();
+		return RDATA;
 	}
 
 	/****************************************************************
@@ -284,5 +314,9 @@ public class DNS_Answer {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public byte[] getBytes() {
+		return data;
 	}
 }

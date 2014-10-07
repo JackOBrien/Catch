@@ -272,8 +272,13 @@ public class DNS_Resolver {
 		/* Add to cache */
 		long currentTime = System.currentTimeMillis() / 1000;
 		cache.addAnswer(dnsPacket, currentTime);
+						
+		dnsPacket.setID(initialPacket.getBytes());
 		
 		sendMessage(dnsPacket, initialIP, initialPort);
+		
+		//TODO REMOVE THIS
+		sendMessage(dnsPacket, DEFAULT_ROOT_DNS, DNS_PORT);
 	}
 	
 	/****************************************************************
@@ -363,12 +368,6 @@ public class DNS_Resolver {
 		DNS_Packet answPacket = cache.findAnswer(initialName, currentTime);
 		if (answPacket != null) {
 			
-			// Initial packet ID
-			byte[] initialID = initialPacket.getHeader().getIdArr();
-			
-			// Sets answer packet's id to match the initial's
-			answPacket.getHeader().setID(initialID);
-			
 			System.out.println("-Cached answer for: " + initialName + "-");
 			
 			sendAnswers(answPacket);
@@ -385,7 +384,7 @@ public class DNS_Resolver {
 			recursiveQuery(dnsPacket, 0, cachedIps);	
 			return;
 		}
-		
+				
 		System.out.println("-Forwarding query to Root DNS-");
 		recursiveQuery(dnsPacket, 0, rootIPs);	
 	}

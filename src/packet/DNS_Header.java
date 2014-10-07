@@ -1,5 +1,7 @@
 package packet;
 
+import java.util.Arrays;
+
 /********************************************************************
  * DNS Header
  * Project 3 - CIS 457-10
@@ -202,6 +204,10 @@ public class DNS_Header {
 		return ANCOUNT;
 	}
 	
+	public void setANCOUNT(int count) {
+		ANCOUNT = count;
+	}
+	
 	/****************************************************************
 	 * Returns the number of name servers in the packet.  
 	 * 
@@ -261,27 +267,6 @@ public class DNS_Header {
 		short f = Short.parseShort(bin, 2);
 		flag1 = (byte) f;
 		data[2] = flag1;
-	}
-	
-	public void setID(byte[] bytes) {		
-		
-		if (bytes.length != 2) {
-			bytes = new byte[] {bytes[0], bytes[1]};
-		}
-		
-		idArr = bytes;
-		data[0] = bytes[0];
-		data [1] = bytes[1];
-	}
-	
-	public void setANCOUNT(int count) {
-		ANCOUNT = count;
-		
-		String bin = String.format("%16s", Integer.toBinaryString(
-				count)).replace(' ', '0');
-		
-		data[6] = (byte) Integer.parseInt(bin.substring(0, 8), 2);
-		data[7] = (byte) Integer.parseInt(bin.substring(8, 16), 2);
 	}
 	
 	public byte[] getIdArr() {

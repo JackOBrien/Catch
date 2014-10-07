@@ -160,7 +160,7 @@ public class Cache {
 		if (!answers.isEmpty()){
 			str += "\n" + new String(new char[52]).replace("\0", "-");
 			str += String.format("\n%30s", "Answers");
-			str += String.format("\n%15s  %18s  %15s", "TTL", "Name", "IPv4");
+			str += String.format("\n%15s  %18s  %15s", "TTL", "Name", "RDATA");
 			str += "\n" + new String(new char[52]).replace("\0", "-");
 			for (Cache_Entry entry : answers) {
 				str += entry.toString();

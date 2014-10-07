@@ -3,6 +3,7 @@ package packet;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.sun.org.apache.xpath.internal.operations.And;
 
@@ -27,6 +28,10 @@ public class DNS_Packet {
 	
 	private ArrayList<DNS_Answer> responses;
 	
+	private int offset;
+	
+	private int lastNativeAnsw;
+	
 	private byte[] data;
 	
 	private int dataLength;
@@ -42,6 +47,7 @@ public class DNS_Packet {
 		header = new DNS_Header(d);
 		createQuestions();
 		createResponses();
+		offset = 0;
 	}
 	
 	public DNS_Packet(byte[] d, int length) {
@@ -49,13 +55,16 @@ public class DNS_Packet {
 		dataLength = length;
 		header = new DNS_Header(d);
 		createQuestions();
-		createResponses();
+		createResponses();		
+		offset = 0;
 	}
 	
 	private void createResponses() {
 		responses = new ArrayList<DNS_Answer>();
 		int numResponses = header.getANCOUNT() + header.getNSCOUNT() + 
 				header.getARCOUNT();
+		
+		lastNativeAnsw = 0;
 		
 		if (numResponses > 0) {
 			
@@ -72,6 +81,12 @@ public class DNS_Packet {
 				responses.add(answer);
 			}
 		}
+		
+		if (header.getANCOUNT() > 0) {
+			lastNativeAnsw = 
+					responses.get(header.getANCOUNT() - 1).getEndIndex();
+		}
+		
 	}
 	
 	/****************************************************************
@@ -108,6 +123,16 @@ public class DNS_Packet {
 		data = q.getData();
 		size = data.length - size;
 		dataLength += size;
+	}
+	
+	public void setID(byte[] bytes) {		
+		
+		if (bytes.length != 2) {
+			bytes = new byte[] {bytes[0], bytes[1]};
+		}
+		
+		data[0] = bytes[0];
+		data [1] = bytes[1];
 	}
 	
 	/****************************************************************
@@ -162,11 +187,7 @@ public class DNS_Packet {
 		return answers;
 	}
 	
-	public void addAnswer(DNS_Answer answ) {
-		responses.add(header.getANCOUNT(), answ);
-		header.setANCOUNT(header.getANCOUNT() + 1);
-		dataLength += answ.getLength();
-		
+	public void addAnswer(DNS_Answer answ) {	
 		ArrayList<Byte> byteList = new ArrayList<Byte>();
 		
 		/* Converts byte array to an ArrayList of type Byte */
@@ -174,13 +195,17 @@ public class DNS_Packet {
 			byteList.add(new Byte(b));
 		}
 		
-		int start = answ.getStartIndex();
+		int start = questions.get(0).getEndIndex();
+		
+		if (header.getANCOUNT() > 0)
+			start = responses.get(header.getANCOUNT() - 1).getEndIndex();
 		int length = answ.getLength();
 		
 		byte[] answArr = new byte[length];
+		byte[] totalAnsw = answ.getBytes();
 		
 		for (int i = 0; i < answArr.length; i++) {
-			answArr[i] = data[i + start];
+			answArr[i] = totalAnsw[i + answ.getStartIndex()];
 		}
 		
 		for (byte b : answArr) {
@@ -193,6 +218,28 @@ public class DNS_Packet {
 		for (int i = 0; i < byteList.size(); i++) {
 			data[i] = byteList.get(i).byteValue();
 		}
+		
+		answ.setEndIndex(start + length);
+		
+		responses.add(header.getANCOUNT(), answ);
+		
+		System.out.println("4" + Arrays.toString(data));
+		
+		for (DNS_Answer a : responses) {
+			data = a.accountForOffest(length, lastNativeAnsw, data);
+		}
+		
+		System.out.println("F" + Arrays.toString(data));
+		
+		/* Change the number of answers. */
+		String bin = String.format("%16s", Integer.toBinaryString(
+				(header.getANCOUNT() + 1) & 0xFF)).replace(' ', '0');
+		
+		data[6] = (byte) Integer.parseInt(bin.substring(0, 8), 2);
+		data[7] = (byte) Integer.parseInt(bin.substring(8, 16), 2);
+		header.setANCOUNT(header.getANCOUNT() + 1);
+		
+		dataLength += answ.getLength();
 	}
 	
 	public ArrayList<DNS_Answer> getAnswers(int type) {
@@ -216,10 +263,9 @@ public class DNS_Packet {
 		if (numAnswers == 0) return null;
 		
 		String[] answers = new String[numAnswers];
-		
+				
 		for (int i = 0; i < numAnswers; i++) {
 			answers[i] = responses.get(i).getRDATA();
-			
 		}
 		
 		return answers;
