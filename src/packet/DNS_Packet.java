@@ -163,9 +163,36 @@ public class DNS_Packet {
 	}
 	
 	public void addAnswer(DNS_Answer answ) {
-		responses.add(0, answ);
+		responses.add(header.getANCOUNT(), answ);
 		header.setANCOUNT(header.getANCOUNT() + 1);
 		dataLength += answ.getLength();
+		
+		ArrayList<Byte> byteList = new ArrayList<Byte>();
+		
+		/* Converts byte array to an ArrayList of type Byte */
+		for (byte b : data) {
+			byteList.add(new Byte(b));
+		}
+		
+		int start = answ.getStartIndex();
+		int length = answ.getLength();
+		
+		byte[] answArr = new byte[length];
+		
+		for (int i = 0; i < answArr.length; i++) {
+			answArr[i] = data[i + start];
+		}
+		
+		for (byte b : answArr) {
+			byteList.add(start, new Byte(b));
+			start++;
+		}
+		
+		data = new byte[byteList.size()];
+		
+		for (int i = 0; i < byteList.size(); i++) {
+			data[i] = byteList.get(i).byteValue();
+		}
 	}
 	
 	public ArrayList<DNS_Answer> getAnswers(int type) {

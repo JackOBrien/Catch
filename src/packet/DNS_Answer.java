@@ -263,6 +263,10 @@ public class DNS_Answer {
 		return endIndex;
 	}
 	
+	public int getStartIndex() {
+		return sIndex;
+	}
+	
 	/****************************************************************
 	 * @return the code of this answer's type.
 	 ***************************************************************/
