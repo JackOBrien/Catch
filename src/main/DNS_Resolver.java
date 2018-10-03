@@ -19,10 +19,9 @@ import packet.DNS_Packet;
  * Project 3 - CIS 457-10
  *
  * @author Jack O'Brien
- * @author Megan Maher
  * @author Tyler McCarthy
  * 
- * @version Oct 7, 2014
+ * @version Oct 3, 2018
  *******************************************************************/
 public class DNS_Resolver {
 	
@@ -41,7 +40,7 @@ public class DNS_Resolver {
 	/** The address of this resolver. */
 	private InetAddress SERVER_IP;
 	
-	/** The socket of this server. */
+	/** The server's datagram socket. */
 	private DatagramSocket serverSocket;
 		
 	/** List of all the root IPs */
