@@ -41,7 +41,7 @@ public class DNS_Resolver {
 	/** The address of this resolver. */
 	private InetAddress SERVER_IP;
 	
-	/** Te socket of this server. */
+	/** The socket of this server. */
 	private DatagramSocket serverSocket;
 		
 	/** List of all the root IPs */
